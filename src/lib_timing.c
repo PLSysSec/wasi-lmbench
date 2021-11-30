@@ -34,752 +34,752 @@ static volatile uint64	use_result_dummy;
 static		uint64	iterations;
 static		void	init_timing(void);
 
-#if defined(hpux) || defined(__hpux)
-#include <sys/mman.h>
-#endif
+// #if defined(hpux) || defined(__hpux)
+// #include <sys/mman.h>
+// #endif
 
-#ifdef	RUSAGE
-#include <sys/resource.h>
-#define	SECS(tv)	(tv.tv_sec + tv.tv_usec / 1000000.0)
-#define	mine(f)		(int)(ru_stop.f - ru_start.f)
+// #ifdef	RUSAGE
+// #include <sys/resource.h>
+// #define	SECS(tv)	(tv.tv_sec + tv.tv_usec / 1000000.0)
+// #define	mine(f)		(int)(ru_stop.f - ru_start.f)
 
-static struct rusage ru_start, ru_stop;
+// static struct rusage ru_start, ru_stop;
 
-void
-rusage(void)
-{
-	double  sys, user, idle;
-	double  per;
+// void
+// rusage(void)
+// {
+// 	double  sys, user, idle;
+// 	double  per;
 
-	sys = SECS(ru_stop.ru_stime) - SECS(ru_start.ru_stime);
-	user = SECS(ru_stop.ru_utime) - SECS(ru_start.ru_utime);
-	idle = timespent() - (sys + user);
-	per = idle / timespent() * 100;
-	if (!ftiming) ftiming = stderr;
-	fprintf(ftiming, "real=%.2f sys=%.2f user=%.2f idle=%.2f stall=%.0f%% ",
-	    timespent(), sys, user, idle, per);
-	fprintf(ftiming, "rd=%d wr=%d min=%d maj=%d ctx=%d\n",
-	    mine(ru_inblock), mine(ru_oublock),
-	    mine(ru_minflt), mine(ru_majflt),
-	    mine(ru_nvcsw) + mine(ru_nivcsw));
-}
+// 	sys = SECS(ru_stop.ru_stime) - SECS(ru_start.ru_stime);
+// 	user = SECS(ru_stop.ru_utime) - SECS(ru_start.ru_utime);
+// 	idle = timespent() - (sys + user);
+// 	per = idle / timespent() * 100;
+// 	if (!ftiming) ftiming = stderr;
+// 	fprintf(ftiming, "real=%.2f sys=%.2f user=%.2f idle=%.2f stall=%.0f%% ",
+// 	    timespent(), sys, user, idle, per);
+// 	fprintf(ftiming, "rd=%d wr=%d min=%d maj=%d ctx=%d\n",
+// 	    mine(ru_inblock), mine(ru_oublock),
+// 	    mine(ru_minflt), mine(ru_majflt),
+// 	    mine(ru_nvcsw) + mine(ru_nivcsw));
+// }
 
-#endif	/* RUSAGE */
+// #endif	/* RUSAGE */
 
-void
-lmbench_usage(int argc, char *argv[], char* usage)
-{
-	fprintf(stderr,"Usage: %s %s", argv[0], usage);
-	exit(-1);
-}
+// void
+// lmbench_usage(int argc, char *argv[], char* usage)
+// {
+// 	fprintf(stderr,"Usage: %s %s", argv[0], usage);
+// 	exit(-1);
+// }
 
 
-void
-sigchld_wait_handler(int signo)
-{
-	wait(0);
-	signal(SIGCHLD, sigchld_wait_handler);
-}
+// void
+// sigchld_wait_handler(int signo)
+// {
+// 	wait(0);
+// 	signal(SIGCHLD, sigchld_wait_handler);
+// }
 
-static int	benchmp_sigterm_received;
-static int	benchmp_sigchld_received;
-static pid_t	benchmp_sigalrm_pid;
-static int	benchmp_sigalrm_timeout;
-void (*benchmp_sigterm_handler)(int);
-void (*benchmp_sigchld_handler)(int);
-void (*benchmp_sigalrm_handler)(int);
+// static int	benchmp_sigterm_received;
+// static int	benchmp_sigchld_received;
+// static pid_t	benchmp_sigalrm_pid;
+// static int	benchmp_sigalrm_timeout;
+// void (*benchmp_sigterm_handler)(int);
+// void (*benchmp_sigchld_handler)(int);
+// void (*benchmp_sigalrm_handler)(int);
 
-void
-benchmp_sigterm(int signo)
-{
-	benchmp_sigterm_received = 1;
-}
+// void
+// benchmp_sigterm(int signo)
+// {
+// 	benchmp_sigterm_received = 1;
+// }
 
-void
-benchmp_sigchld(int signo)
-{
-	signal(SIGCHLD, SIG_DFL);
-	benchmp_sigchld_received = 1;
-#ifdef _DEBUG
-	fprintf(stderr, "benchmp_sigchld handler\n");
-#endif
-}
+// void
+// benchmp_sigchld(int signo)
+// {
+// 	signal(SIGCHLD, SIG_DFL);
+// 	benchmp_sigchld_received = 1;
+// #ifdef _DEBUG
+// 	fprintf(stderr, "benchmp_sigchld handler\n");
+// #endif
+// }
 
-void
-benchmp_sigalrm(int signo)
-{
-	signal(SIGALRM, SIG_IGN);
-	kill(benchmp_sigalrm_pid, SIGTERM);
-	/* 
-	 * Since we already waited a full timeout period for the child
-	 * to die, we only need to wait a little longer for subsequent
-	 * children to die.
-	 */
-	benchmp_sigalrm_timeout = 1;
-}
+// void
+// benchmp_sigalrm(int signo)
+// {
+// 	signal(SIGALRM, SIG_IGN);
+// 	kill(benchmp_sigalrm_pid, SIGTERM);
+// 	/* 
+// 	 * Since we already waited a full timeout period for the child
+// 	 * to die, we only need to wait a little longer for subsequent
+// 	 * children to die.
+// 	 */
+// 	benchmp_sigalrm_timeout = 1;
+// }
 
-void 
-benchmp_child(benchmp_f initialize, 
-	      benchmp_f benchmark,
-	      benchmp_f cleanup,
-	      int childid,
-	      int response, 
-	      int start_signal, 
-	      int result_signal, 
-	      int exit_signal,
-	      int parallel, 
-	      iter_t iterations,
-	      int repetitions,
-	      int enough,
-	      void* cookie
-	      );
-void
-benchmp_parent(int response, 
-	       int start_signal, 
-	       int result_signal, 
-	       int exit_signal, 
-	       pid_t* pids,
-	       int parallel, 
-	       iter_t iterations,
-	       int warmup,
-	       int repetitions,
-	       int enough
-	       );
+// void 
+// benchmp_child(benchmp_f initialize, 
+// 	      benchmp_f benchmark,
+// 	      benchmp_f cleanup,
+// 	      int childid,
+// 	      int response, 
+// 	      int start_signal, 
+// 	      int result_signal, 
+// 	      int exit_signal,
+// 	      int parallel, 
+// 	      iter_t iterations,
+// 	      int repetitions,
+// 	      int enough,
+// 	      void* cookie
+// 	      );
+// void
+// benchmp_parent(int response, 
+// 	       int start_signal, 
+// 	       int result_signal, 
+// 	       int exit_signal, 
+// 	       pid_t* pids,
+// 	       int parallel, 
+// 	       iter_t iterations,
+// 	       int warmup,
+// 	       int repetitions,
+// 	       int enough
+// 	       );
 
-int
-sizeof_result(int repetitions);
+// int
+// sizeof_result(int repetitions);
 
-void 
-benchmp(benchmp_f initialize, 
-	benchmp_f benchmark,
-	benchmp_f cleanup,
-	int enough, 
-	int parallel,
-	int warmup,
-	int repetitions,
-	void* cookie)
-{
-	iter_t		iterations = 1;
-	double		result = 0.;
-	double		usecs;
-	long		i, j;
-	pid_t		pid;
-	pid_t		*pids = NULL;
-	int		response[2];
-	int		start_signal[2];
-	int		result_signal[2];
-	int		exit_signal[2];
-	int		need_warmup;
-	fd_set		fds;
-	struct timeval	timeout;
+// void 
+// benchmp(benchmp_f initialize, 
+// 	benchmp_f benchmark,
+// 	benchmp_f cleanup,
+// 	int enough, 
+// 	int parallel,
+// 	int warmup,
+// 	int repetitions,
+// 	void* cookie)
+// {
+// 	iter_t		iterations = 1;
+// 	double		result = 0.;
+// 	double		usecs;
+// 	long		i, j;
+// 	pid_t		pid;
+// 	pid_t		*pids = NULL;
+// 	int		response[2];
+// 	int		start_signal[2];
+// 	int		result_signal[2];
+// 	int		exit_signal[2];
+// 	int		need_warmup;
+// 	fd_set		fds;
+// 	struct timeval	timeout;
 
-#ifdef _DEBUG
-	fprintf(stderr, "benchmp(%p, %p, %p, %d, %d, %d, %d, %p): entering\n", initialize, benchmark, cleanup, enough, parallel, warmup, repetitions, cookie);
-#endif
-	enough = get_enough(enough);
-#ifdef _DEBUG
-	fprintf(stderr, "\tenough=%d\n", enough);
-#endif
+// #ifdef _DEBUG
+// 	fprintf(stderr, "benchmp(%p, %p, %p, %d, %d, %d, %d, %p): entering\n", initialize, benchmark, cleanup, enough, parallel, warmup, repetitions, cookie);
+// #endif
+// 	enough = get_enough(enough);
+// #ifdef _DEBUG
+// 	fprintf(stderr, "\tenough=%d\n", enough);
+// #endif
 
-	/* initialize results */
-	settime(0);
-	save_n(1);
+// 	/* initialize results */
+// 	settime(0);
+// 	save_n(1);
 
-	if (parallel > 1) {
-		/* Compute the baseline performance */
-		benchmp(initialize, benchmark, cleanup, 
-			enough, 1, warmup, repetitions, cookie);
+// 	if (parallel > 1) {
+// 		/* Compute the baseline performance */
+// 		benchmp(initialize, benchmark, cleanup, 
+// 			enough, 1, warmup, repetitions, cookie);
 
-		/* if we can't even do a single job, then give up */
-		if (gettime() == 0)
-			return;
+// 		/* if we can't even do a single job, then give up */
+// 		if (gettime() == 0)
+// 			return;
 
-		/* calculate iterations for 1sec runtime */
-		iterations = get_n();
-		if (enough < SHORT) {
-			double tmp = (double)SHORT * (double)get_n();
-			tmp /= (double)gettime();
-			iterations = (iter_t)tmp + 1;
-		}
-		settime(0);
-		save_n(1);
-	}
+// 		/* calculate iterations for 1sec runtime */
+// 		iterations = get_n();
+// 		if (enough < SHORT) {
+// 			double tmp = (double)SHORT * (double)get_n();
+// 			tmp /= (double)gettime();
+// 			iterations = (iter_t)tmp + 1;
+// 		}
+// 		settime(0);
+// 		save_n(1);
+// 	}
 
-	/* Create the necessary pipes for control */
-	if (pipe(response) < 0
-	    || pipe(start_signal) < 0
-	    || pipe(result_signal) < 0
-	    || pipe(exit_signal) < 0) {
-#ifdef _DEBUG
-		fprintf(stderr, "BENCHMP: Could not create control pipes\n");
-#endif /* _DEBUG */
-		return;
-	}
+// 	/* Create the necessary pipes for control */
+// 	if (pipe(response) < 0
+// 	    || pipe(start_signal) < 0
+// 	    || pipe(result_signal) < 0
+// 	    || pipe(exit_signal) < 0) {
+// #ifdef _DEBUG
+// 		fprintf(stderr, "BENCHMP: Could not create control pipes\n");
+// #endif /* _DEBUG */
+// 		return;
+// 	}
 
-	/* fork the necessary children */
-	benchmp_sigchld_received = 0;
-	benchmp_sigterm_received = 0;
-	benchmp_sigterm_handler = signal(SIGTERM, benchmp_sigterm);
-	benchmp_sigchld_handler = signal(SIGCHLD, benchmp_sigchld);
-	pids = (pid_t*)malloc(parallel * sizeof(pid_t));
-	if (!pids) return;
-	bzero((void*)pids, parallel * sizeof(pid_t));
+// 	/* fork the necessary children */
+// 	benchmp_sigchld_received = 0;
+// 	benchmp_sigterm_received = 0;
+// 	benchmp_sigterm_handler = signal(SIGTERM, benchmp_sigterm);
+// 	benchmp_sigchld_handler = signal(SIGCHLD, benchmp_sigchld);
+// 	pids = (pid_t*)malloc(parallel * sizeof(pid_t));
+// 	if (!pids) return;
+// 	bzero((void*)pids, parallel * sizeof(pid_t));
 
-	for (i = 0; i < parallel; ++i) {
-		if (benchmp_sigterm_received)
-			goto error_exit;
-#ifdef _DEBUG
-		fprintf(stderr, "benchmp(%p, %p, %p, %d, %d, %d, %d, %p): creating child %d\n", initialize, benchmark, cleanup, enough, parallel, warmup, repetitions, cookie, i);
-#endif
-		switch(pids[i] = fork()) {
-		case -1:
-			/* could not open enough children! */
-#ifdef _DEBUG
-			fprintf(stderr, "BENCHMP: fork() failed!\n");
-#endif /* _DEBUG */
-			goto error_exit;
-		case 0:
-			/* If child */
-			close(response[0]);
-			close(start_signal[1]);
-			close(result_signal[1]);
-			close(exit_signal[1]);
-			handle_scheduler(i, 0, 0);
-			benchmp_child(initialize, 
-				      benchmark, 
-				      cleanup, 
-				      i,
-				      response[1], 
-				      start_signal[0], 
-				      result_signal[0], 
-				      exit_signal[0],
-				      enough,
-				      iterations,
-				      parallel,
-				      repetitions,
-				      cookie
-				);
-			exit(0);
-		default:
-			break;
-		}
-	}
-	close(response[1]);
-	close(start_signal[0]);
-	close(result_signal[0]);
-	close(exit_signal[0]);
-	benchmp_parent(response[0], 
-		       start_signal[1], 
-		       result_signal[1], 
-		       exit_signal[1],
-		       pids,
-		       parallel, 
-		       iterations,
-		       warmup,
-		       repetitions,
-		       enough
-		);
-	goto cleanup_exit;
+// 	for (i = 0; i < parallel; ++i) {
+// 		if (benchmp_sigterm_received)
+// 			goto error_exit;
+// #ifdef _DEBUG
+// 		fprintf(stderr, "benchmp(%p, %p, %p, %d, %d, %d, %d, %p): creating child %d\n", initialize, benchmark, cleanup, enough, parallel, warmup, repetitions, cookie, i);
+// #endif
+// 		switch(pids[i] = fork()) {
+// 		case -1:
+// 			/* could not open enough children! */
+// #ifdef _DEBUG
+// 			fprintf(stderr, "BENCHMP: fork() failed!\n");
+// #endif /* _DEBUG */
+// 			goto error_exit;
+// 		case 0:
+// 			/* If child */
+// 			close(response[0]);
+// 			close(start_signal[1]);
+// 			close(result_signal[1]);
+// 			close(exit_signal[1]);
+// 			handle_scheduler(i, 0, 0);
+// 			benchmp_child(initialize, 
+// 				      benchmark, 
+// 				      cleanup, 
+// 				      i,
+// 				      response[1], 
+// 				      start_signal[0], 
+// 				      result_signal[0], 
+// 				      exit_signal[0],
+// 				      enough,
+// 				      iterations,
+// 				      parallel,
+// 				      repetitions,
+// 				      cookie
+// 				);
+// 			exit(0);
+// 		default:
+// 			break;
+// 		}
+// 	}
+// 	close(response[1]);
+// 	close(start_signal[0]);
+// 	close(result_signal[0]);
+// 	close(exit_signal[0]);
+// 	benchmp_parent(response[0], 
+// 		       start_signal[1], 
+// 		       result_signal[1], 
+// 		       exit_signal[1],
+// 		       pids,
+// 		       parallel, 
+// 		       iterations,
+// 		       warmup,
+// 		       repetitions,
+// 		       enough
+// 		);
+// 	goto cleanup_exit;
 
-error_exit:
-	/* give the children a chance to clean up gracefully */
-	signal(SIGCHLD, SIG_DFL);
-	while (--i >= 0) {
-		kill(pids[i], SIGTERM);
-		waitpid(pids[i], NULL, 0);
-	}
+// error_exit:
+// 	/* give the children a chance to clean up gracefully */
+// 	signal(SIGCHLD, SIG_DFL);
+// 	while (--i >= 0) {
+// 		kill(pids[i], SIGTERM);
+// 		waitpid(pids[i], NULL, 0);
+// 	}
 
-cleanup_exit:
-	/* 
-	 * Clean up and kill all children
-	 *
-	 * NOTE: the children themselves SHOULD exit, and
-	 *   Killing them could prevent them from
-	 *   cleanup up subprocesses, etc... So, we only
-	 *   want to kill child processes when it appears
-	 *   that they will not die of their own accord.
-	 *   We wait twice the timing interval plus two seconds
-	 *   for children to die.  If they haven't died by 
-	 *   that time, then we start killing them.
-	 */
-	benchmp_sigalrm_timeout = (int)((2 * enough)/1000000) + 2;
-	if (benchmp_sigalrm_timeout < 5)
-		benchmp_sigalrm_timeout = 5;
-	signal(SIGCHLD, SIG_DFL);
-	while (i-- > 0) {
-		/* wait timeout seconds for child to die, then kill it */
-		benchmp_sigalrm_pid = pids[i];
-		benchmp_sigalrm_handler = signal(SIGALRM, benchmp_sigalrm);
-		alarm(benchmp_sigalrm_timeout); 
+// cleanup_exit:
+// 	/* 
+// 	 * Clean up and kill all children
+// 	 *
+// 	 * NOTE: the children themselves SHOULD exit, and
+// 	 *   Killing them could prevent them from
+// 	 *   cleanup up subprocesses, etc... So, we only
+// 	 *   want to kill child processes when it appears
+// 	 *   that they will not die of their own accord.
+// 	 *   We wait twice the timing interval plus two seconds
+// 	 *   for children to die.  If they haven't died by 
+// 	 *   that time, then we start killing them.
+// 	 */
+// 	benchmp_sigalrm_timeout = (int)((2 * enough)/1000000) + 2;
+// 	if (benchmp_sigalrm_timeout < 5)
+// 		benchmp_sigalrm_timeout = 5;
+// 	signal(SIGCHLD, SIG_DFL);
+// 	while (i-- > 0) {
+// 		/* wait timeout seconds for child to die, then kill it */
+// 		benchmp_sigalrm_pid = pids[i];
+// 		benchmp_sigalrm_handler = signal(SIGALRM, benchmp_sigalrm);
+// 		alarm(benchmp_sigalrm_timeout); 
 
-		waitpid(pids[i], NULL, 0);
+// 		waitpid(pids[i], NULL, 0);
 
-		alarm(0);
-		signal(SIGALRM, benchmp_sigalrm_handler);
-	}
+// 		alarm(0);
+// 		signal(SIGALRM, benchmp_sigalrm_handler);
+// 	}
 
-	if (pids) free(pids);
-#ifdef _DEBUG
-	fprintf(stderr, "benchmp(0x%x, 0x%x, 0x%x, %d, %d, 0x%x): exiting\n", (unsigned int)initialize, (unsigned int)benchmark, (unsigned int)cleanup, enough, parallel, (unsigned int)cookie);
-#endif
-}
+// 	if (pids) free(pids);
+// #ifdef _DEBUG
+// 	fprintf(stderr, "benchmp(0x%x, 0x%x, 0x%x, %d, %d, 0x%x): exiting\n", (unsigned int)initialize, (unsigned int)benchmark, (unsigned int)cleanup, enough, parallel, (unsigned int)cookie);
+// #endif
+// }
 
-void
-benchmp_parent(	int response, 
-		int start_signal, 
-		int result_signal, 
-		int exit_signal,
-		pid_t* pids,
-		int parallel, 
-	        iter_t iterations,
-		int warmup,
-		int repetitions,
-		int enough
-		)
-{
-	int		i,j,k,l;
-	int		bytes_read;
-	result_t*	results = NULL;
-	result_t*	merged_results = NULL;
-	char*		signals = NULL;
-	unsigned char*	buf;
-	fd_set		fds_read, fds_error;
-	struct timeval	timeout;
+// void
+// benchmp_parent(	int response, 
+// 		int start_signal, 
+// 		int result_signal, 
+// 		int exit_signal,
+// 		pid_t* pids,
+// 		int parallel, 
+// 	        iter_t iterations,
+// 		int warmup,
+// 		int repetitions,
+// 		int enough
+// 		)
+// {
+// 	int		i,j,k,l;
+// 	int		bytes_read;
+// 	result_t*	results = NULL;
+// 	result_t*	merged_results = NULL;
+// 	char*		signals = NULL;
+// 	unsigned char*	buf;
+// 	fd_set		fds_read, fds_error;
+// 	struct timeval	timeout;
 
-	if (benchmp_sigchld_received || benchmp_sigterm_received) {
-#ifdef _DEBUG
-		fprintf(stderr, "benchmp_parent: entering, benchmp_sigchld_received=%d\n", benchmp_sigchld_received);
-#endif
-		goto error_exit;
-	}
+// 	if (benchmp_sigchld_received || benchmp_sigterm_received) {
+// #ifdef _DEBUG
+// 		fprintf(stderr, "benchmp_parent: entering, benchmp_sigchld_received=%d\n", benchmp_sigchld_received);
+// #endif
+// 		goto error_exit;
+// 	}
 
-	results = (result_t*)malloc(sizeof_result(repetitions));
-	merged_results = (result_t*)malloc(sizeof_result(parallel * repetitions));
-	signals = (char*)malloc(parallel * sizeof(char));
-	if (!results || !merged_results || !signals) return;
+// 	results = (result_t*)malloc(sizeof_result(repetitions));
+// 	merged_results = (result_t*)malloc(sizeof_result(parallel * repetitions));
+// 	signals = (char*)malloc(parallel * sizeof(char));
+// 	if (!results || !merged_results || !signals) return;
 
-	/* Collect 'ready' signals */
-	for (i = 0; i < parallel * sizeof(char); i += bytes_read) {
-		bytes_read = 0;
-		FD_ZERO(&fds_read);
-		FD_ZERO(&fds_error);
-		FD_SET(response, &fds_read);
-		FD_SET(response, &fds_error);
+// 	/* Collect 'ready' signals */
+// 	for (i = 0; i < parallel * sizeof(char); i += bytes_read) {
+// 		bytes_read = 0;
+// 		FD_ZERO(&fds_read);
+// 		FD_ZERO(&fds_error);
+// 		FD_SET(response, &fds_read);
+// 		FD_SET(response, &fds_error);
 
-		timeout.tv_sec = 1;
-		timeout.tv_usec = 0;
-		select(response+1, &fds_read, NULL, &fds_error, &timeout);
-		if (benchmp_sigchld_received 
-		    || benchmp_sigterm_received
-		    || FD_ISSET(response, &fds_error)) 
-		{
-#ifdef _DEBUG
-			fprintf(stderr, "benchmp_parent: ready, benchmp_sigchld_received=%d\n", benchmp_sigchld_received);
-#endif
-			goto error_exit;
-		}
-		if (!FD_ISSET(response, &fds_read)) {
-			continue;
-		}
+// 		timeout.tv_sec = 1;
+// 		timeout.tv_usec = 0;
+// 		select(response+1, &fds_read, NULL, &fds_error, &timeout);
+// 		if (benchmp_sigchld_received 
+// 		    || benchmp_sigterm_received
+// 		    || FD_ISSET(response, &fds_error)) 
+// 		{
+// #ifdef _DEBUG
+// 			fprintf(stderr, "benchmp_parent: ready, benchmp_sigchld_received=%d\n", benchmp_sigchld_received);
+// #endif
+// 			goto error_exit;
+// 		}
+// 		if (!FD_ISSET(response, &fds_read)) {
+// 			continue;
+// 		}
 
-		bytes_read = read(response, signals, parallel * sizeof(char) - i);
-		if (bytes_read < 0) {
-#ifdef _DEBUG
-			fprintf(stderr, "benchmp_parent: ready, bytes_read=%d, %s\n", bytes_read, strerror(errno));
-#endif
-			goto error_exit;
-		}
-	}
+// 		bytes_read = read(response, signals, parallel * sizeof(char) - i);
+// 		if (bytes_read < 0) {
+// #ifdef _DEBUG
+// 			fprintf(stderr, "benchmp_parent: ready, bytes_read=%d, %s\n", bytes_read, strerror(errno));
+// #endif
+// 			goto error_exit;
+// 		}
+// 	}
 
-	/* let the children run for warmup microseconds */
-	if (warmup > 0) {
-		struct timeval delay;
-		delay.tv_sec = warmup / 1000000;
-		delay.tv_usec = warmup % 1000000;
+// 	/* let the children run for warmup microseconds */
+// 	if (warmup > 0) {
+// 		struct timeval delay;
+// 		delay.tv_sec = warmup / 1000000;
+// 		delay.tv_usec = warmup % 1000000;
 
-		select(0, NULL, NULL, NULL, &delay);
-	}
+// 		select(0, NULL, NULL, NULL, &delay);
+// 	}
 
-	/* send 'start' signal */
-	write(start_signal, signals, parallel * sizeof(char));
+// 	/* send 'start' signal */
+// 	write(start_signal, signals, parallel * sizeof(char));
 
-	/* Collect 'done' signals */
-	for (i = 0; i < parallel * sizeof(char); i += bytes_read) {
-		bytes_read = 0;
-		FD_ZERO(&fds_read);
-		FD_ZERO(&fds_error);
-		FD_SET(response, &fds_read);
-		FD_SET(response, &fds_error);
+// 	/* Collect 'done' signals */
+// 	for (i = 0; i < parallel * sizeof(char); i += bytes_read) {
+// 		bytes_read = 0;
+// 		FD_ZERO(&fds_read);
+// 		FD_ZERO(&fds_error);
+// 		FD_SET(response, &fds_read);
+// 		FD_SET(response, &fds_error);
 
-		timeout.tv_sec = 1;
-		timeout.tv_usec = 0;
-		select(response+1, &fds_read, NULL, &fds_error, &timeout);
-		if (benchmp_sigchld_received 
-		    || benchmp_sigterm_received
-		    || FD_ISSET(response, &fds_error)) 
-		{
-#ifdef _DEBUG
-			fprintf(stderr, "benchmp_parent: done, benchmp_child_died=%d\n", benchmp_sigchld_received);
-#endif
-			goto error_exit;
-		}
-		if (!FD_ISSET(response, &fds_read)) {
-			continue;
-		}
+// 		timeout.tv_sec = 1;
+// 		timeout.tv_usec = 0;
+// 		select(response+1, &fds_read, NULL, &fds_error, &timeout);
+// 		if (benchmp_sigchld_received 
+// 		    || benchmp_sigterm_received
+// 		    || FD_ISSET(response, &fds_error)) 
+// 		{
+// #ifdef _DEBUG
+// 			fprintf(stderr, "benchmp_parent: done, benchmp_child_died=%d\n", benchmp_sigchld_received);
+// #endif
+// 			goto error_exit;
+// 		}
+// 		if (!FD_ISSET(response, &fds_read)) {
+// 			continue;
+// 		}
 
-		bytes_read = read(response, signals, parallel * sizeof(char) - i);
-		if (bytes_read < 0) {
-#ifdef _DEBUG
-			fprintf(stderr, "benchmp_parent: done, bytes_read=%d, %s\n", bytes_read, strerror(errno));
-#endif
-			goto error_exit;
-		}
-	}
+// 		bytes_read = read(response, signals, parallel * sizeof(char) - i);
+// 		if (bytes_read < 0) {
+// #ifdef _DEBUG
+// 			fprintf(stderr, "benchmp_parent: done, bytes_read=%d, %s\n", bytes_read, strerror(errno));
+// #endif
+// 			goto error_exit;
+// 		}
+// 	}
 
-	/* collect results */
-	insertinit(merged_results);
-	for (i = 0; i < parallel; ++i) {
-		int n = sizeof_result(repetitions);
-		buf = (unsigned char*)results;
+// 	/* collect results */
+// 	insertinit(merged_results);
+// 	for (i = 0; i < parallel; ++i) {
+// 		int n = sizeof_result(repetitions);
+// 		buf = (unsigned char*)results;
 
-		FD_ZERO(&fds_read);
-		FD_ZERO(&fds_error);
+// 		FD_ZERO(&fds_read);
+// 		FD_ZERO(&fds_error);
 
-		/* tell one child to report its results */
-		write(result_signal, buf, sizeof(char));
+// 		/* tell one child to report its results */
+// 		write(result_signal, buf, sizeof(char));
 
-		for (; n > 0; n -= bytes_read, buf += bytes_read) {
-			bytes_read = 0;
-			FD_SET(response, &fds_read);
-			FD_SET(response, &fds_error);
+// 		for (; n > 0; n -= bytes_read, buf += bytes_read) {
+// 			bytes_read = 0;
+// 			FD_SET(response, &fds_read);
+// 			FD_SET(response, &fds_error);
 
-			timeout.tv_sec = 1;
-			timeout.tv_usec = 0;
-			select(response+1, &fds_read, NULL, &fds_error, &timeout);
-			if (benchmp_sigchld_received 
-			    || benchmp_sigterm_received
-			    || FD_ISSET(response, &fds_error)) 
-			{
-#ifdef _DEBUG
-				fprintf(stderr, "benchmp_parent: results, benchmp_sigchld_received=%d\n", benchmp_sigchld_received);
-#endif
-				goto error_exit;
-			}
-			if (!FD_ISSET(response, &fds_read)) {
-				continue;
-			}
+// 			timeout.tv_sec = 1;
+// 			timeout.tv_usec = 0;
+// 			select(response+1, &fds_read, NULL, &fds_error, &timeout);
+// 			if (benchmp_sigchld_received 
+// 			    || benchmp_sigterm_received
+// 			    || FD_ISSET(response, &fds_error)) 
+// 			{
+// #ifdef _DEBUG
+// 				fprintf(stderr, "benchmp_parent: results, benchmp_sigchld_received=%d\n", benchmp_sigchld_received);
+// #endif
+// 				goto error_exit;
+// 			}
+// 			if (!FD_ISSET(response, &fds_read)) {
+// 				continue;
+// 			}
 
-			bytes_read = read(response, buf, n);
-			if (bytes_read < 0) {
-#ifdef _DEBUG
-				fprintf(stderr, "benchmp_parent: results, bytes_read=%d, %s\n", bytes_read, strerror(errno));
-#endif
-				goto error_exit;
-			}
-		}
-		for (j = 0; j < results->N; ++j) {
-			insertsort(results->v[j].u, 
-				   results->v[j].n, merged_results);
-		}
-	}
+// 			bytes_read = read(response, buf, n);
+// 			if (bytes_read < 0) {
+// #ifdef _DEBUG
+// 				fprintf(stderr, "benchmp_parent: results, bytes_read=%d, %s\n", bytes_read, strerror(errno));
+// #endif
+// 				goto error_exit;
+// 			}
+// 		}
+// 		for (j = 0; j < results->N; ++j) {
+// 			insertsort(results->v[j].u, 
+// 				   results->v[j].n, merged_results);
+// 		}
+// 	}
 
-	/* we allow children to die now, without it causing an error */
-	signal(SIGCHLD, SIG_DFL);
+// 	/* we allow children to die now, without it causing an error */
+// 	signal(SIGCHLD, SIG_DFL);
 	
-	/* send 'exit' signals */
-	write(exit_signal, results, parallel * sizeof(char));
+// 	/* send 'exit' signals */
+// 	write(exit_signal, results, parallel * sizeof(char));
 
-	/* Compute median time; iterations is constant! */
-	set_results(merged_results);
+// 	/* Compute median time; iterations is constant! */
+// 	set_results(merged_results);
 
-	goto cleanup_exit;
-error_exit:
-#ifdef _DEBUG
-	fprintf(stderr, "benchmp_parent: error_exit!\n");
-#endif
-	signal(SIGCHLD, SIG_DFL);
-	for (i = 0; i < parallel; ++i) {
-		kill(pids[i], SIGTERM);
-		waitpid(pids[i], NULL, 0);
-	}
-	free(merged_results);
-cleanup_exit:
-	close(response);
-	close(start_signal);
-	close(result_signal);
-	close(exit_signal);
+// 	goto cleanup_exit;
+// error_exit:
+// #ifdef _DEBUG
+// 	fprintf(stderr, "benchmp_parent: error_exit!\n");
+// #endif
+// 	signal(SIGCHLD, SIG_DFL);
+// 	for (i = 0; i < parallel; ++i) {
+// 		kill(pids[i], SIGTERM);
+// 		waitpid(pids[i], NULL, 0);
+// 	}
+// 	free(merged_results);
+// cleanup_exit:
+// 	close(response);
+// 	close(start_signal);
+// 	close(result_signal);
+// 	close(exit_signal);
 
-	if (results) free(results);
-	if (signals) free(signals);
-}
+// 	if (results) free(results);
+// 	if (signals) free(signals);
+// }
 
 
-typedef enum { warmup, timing_interval, cooldown } benchmp_state;
+// typedef enum { warmup, timing_interval, cooldown } benchmp_state;
 
-typedef struct {
-	benchmp_state	state;
-	benchmp_f	initialize;
-	benchmp_f	benchmark;
-	benchmp_f	cleanup;
-	int		childid;
-	int		response;
-	int		start_signal;
-	int		result_signal;
-	int		exit_signal;
-	int		enough;
-        iter_t		iterations;
-	int		parallel;
-        int		repetitions;
-	void*		cookie;
-	iter_t		iterations_batch;
-	int		need_warmup;
-	long		i;
-	int		r_size;
-	result_t*	r;
-} benchmp_child_state;
+// typedef struct {
+// 	benchmp_state	state;
+// 	benchmp_f	initialize;
+// 	benchmp_f	benchmark;
+// 	benchmp_f	cleanup;
+// 	int		childid;
+// 	int		response;
+// 	int		start_signal;
+// 	int		result_signal;
+// 	int		exit_signal;
+// 	int		enough;
+//         iter_t		iterations;
+// 	int		parallel;
+//         int		repetitions;
+// 	void*		cookie;
+// 	iter_t		iterations_batch;
+// 	int		need_warmup;
+// 	long		i;
+// 	int		r_size;
+// 	result_t*	r;
+// } benchmp_child_state;
 
-static benchmp_child_state _benchmp_child_state;
+// static benchmp_child_state _benchmp_child_state;
 
-int
-benchmp_childid()
-{
-	return _benchmp_child_state.childid;
-}
+// int
+// benchmp_childid()
+// {
+// 	return _benchmp_child_state.childid;
+// }
 
-void
-benchmp_child_sigchld(int signo)
-{
-#ifdef _DEBUG
-	fprintf(stderr, "benchmp_child_sigchld handler\n");
-#endif
-	if (_benchmp_child_state.cleanup) {
-		signal(SIGCHLD, SIG_DFL);
-		(*_benchmp_child_state.cleanup)(0, &_benchmp_child_state);
-	}
-	exit(1);
-}
+// void
+// benchmp_child_sigchld(int signo)
+// {
+// #ifdef _DEBUG
+// 	fprintf(stderr, "benchmp_child_sigchld handler\n");
+// #endif
+// 	if (_benchmp_child_state.cleanup) {
+// 		signal(SIGCHLD, SIG_DFL);
+// 		(*_benchmp_child_state.cleanup)(0, &_benchmp_child_state);
+// 	}
+// 	exit(1);
+// }
 
-void
-benchmp_child_sigterm(int signo)
-{
-	signal(SIGTERM, SIG_IGN);
-	if (_benchmp_child_state.cleanup) {
-		void (*sig)(int) = signal(SIGCHLD, SIG_DFL);
-		if (sig != benchmp_child_sigchld && sig != SIG_DFL) {
-			signal(SIGCHLD, sig);
-		}
-		(*_benchmp_child_state.cleanup)(0, &_benchmp_child_state);
-	}
-	exit(0);
-}
+// void
+// benchmp_child_sigterm(int signo)
+// {
+// 	signal(SIGTERM, SIG_IGN);
+// 	if (_benchmp_child_state.cleanup) {
+// 		void (*sig)(int) = signal(SIGCHLD, SIG_DFL);
+// 		if (sig != benchmp_child_sigchld && sig != SIG_DFL) {
+// 			signal(SIGCHLD, sig);
+// 		}
+// 		(*_benchmp_child_state.cleanup)(0, &_benchmp_child_state);
+// 	}
+// 	exit(0);
+// }
 
-void*
-benchmp_getstate()
-{
-	return ((void*)&_benchmp_child_state);
-}
+// void*
+// benchmp_getstate()
+// {
+// 	return ((void*)&_benchmp_child_state);
+// }
 
-void 
-benchmp_child(benchmp_f initialize, 
-		benchmp_f benchmark,
-		benchmp_f cleanup,
-		int childid,
-		int response, 
-		int start_signal, 
-		int result_signal, 
-		int exit_signal,
-		int enough,
-	        iter_t iterations,
-		int parallel, 
-	        int repetitions,
-		void* cookie
-		)
-{
-	iter_t		iterations_batch = (parallel > 1) ? get_n() : 1;
-	double		result = 0.;
-	double		usecs;
-	long		i = 0;
-	int		need_warmup;
-	fd_set		fds;
-	struct timeval	timeout;
+// void 
+// benchmp_child(benchmp_f initialize, 
+// 		benchmp_f benchmark,
+// 		benchmp_f cleanup,
+// 		int childid,
+// 		int response, 
+// 		int start_signal, 
+// 		int result_signal, 
+// 		int exit_signal,
+// 		int enough,
+// 	        iter_t iterations,
+// 		int parallel, 
+// 	        int repetitions,
+// 		void* cookie
+// 		)
+// {
+// 	iter_t		iterations_batch = (parallel > 1) ? get_n() : 1;
+// 	double		result = 0.;
+// 	double		usecs;
+// 	long		i = 0;
+// 	int		need_warmup;
+// 	fd_set		fds;
+// 	struct timeval	timeout;
 
-	_benchmp_child_state.state = warmup;
-	_benchmp_child_state.initialize = initialize;
-	_benchmp_child_state.benchmark = benchmark;
-	_benchmp_child_state.cleanup = cleanup;
-	_benchmp_child_state.childid = childid;
-	_benchmp_child_state.response = response;
-	_benchmp_child_state.start_signal = start_signal;
-	_benchmp_child_state.result_signal = result_signal;
-	_benchmp_child_state.exit_signal = exit_signal;
-	_benchmp_child_state.enough = enough;
-	_benchmp_child_state.iterations = iterations;
-	_benchmp_child_state.iterations_batch = iterations_batch;
-	_benchmp_child_state.parallel = parallel;
-	_benchmp_child_state.repetitions = repetitions;
-	_benchmp_child_state.cookie = cookie;
-	_benchmp_child_state.need_warmup = 1;
-	_benchmp_child_state.i = 0;
-	_benchmp_child_state.r_size = sizeof_result(repetitions);
-	_benchmp_child_state.r = (result_t*)malloc(_benchmp_child_state.r_size);
+// 	_benchmp_child_state.state = warmup;
+// 	_benchmp_child_state.initialize = initialize;
+// 	_benchmp_child_state.benchmark = benchmark;
+// 	_benchmp_child_state.cleanup = cleanup;
+// 	_benchmp_child_state.childid = childid;
+// 	_benchmp_child_state.response = response;
+// 	_benchmp_child_state.start_signal = start_signal;
+// 	_benchmp_child_state.result_signal = result_signal;
+// 	_benchmp_child_state.exit_signal = exit_signal;
+// 	_benchmp_child_state.enough = enough;
+// 	_benchmp_child_state.iterations = iterations;
+// 	_benchmp_child_state.iterations_batch = iterations_batch;
+// 	_benchmp_child_state.parallel = parallel;
+// 	_benchmp_child_state.repetitions = repetitions;
+// 	_benchmp_child_state.cookie = cookie;
+// 	_benchmp_child_state.need_warmup = 1;
+// 	_benchmp_child_state.i = 0;
+// 	_benchmp_child_state.r_size = sizeof_result(repetitions);
+// 	_benchmp_child_state.r = (result_t*)malloc(_benchmp_child_state.r_size);
 
-	if (!_benchmp_child_state.r) return;
-	insertinit(_benchmp_child_state.r);
-	set_results(_benchmp_child_state.r);
+// 	if (!_benchmp_child_state.r) return;
+// 	insertinit(_benchmp_child_state.r);
+// 	set_results(_benchmp_child_state.r);
 
-	need_warmup = 1;
-	timeout.tv_sec = 0;
-	timeout.tv_usec = 0;
+// 	need_warmup = 1;
+// 	timeout.tv_sec = 0;
+// 	timeout.tv_usec = 0;
 
-	if (benchmp_sigchld_handler != SIG_DFL) {
-		signal(SIGCHLD, benchmp_sigchld_handler);
-	} else {
-		signal(SIGCHLD, benchmp_child_sigchld);
-	}
+// 	if (benchmp_sigchld_handler != SIG_DFL) {
+// 		signal(SIGCHLD, benchmp_sigchld_handler);
+// 	} else {
+// 		signal(SIGCHLD, benchmp_child_sigchld);
+// 	}
 
-	if (initialize)
-		(*initialize)(0, cookie);
+// 	if (initialize)
+// 		(*initialize)(0, cookie);
 	
-	if (benchmp_sigterm_handler != SIG_DFL) {
-		signal(SIGTERM, benchmp_sigterm_handler);
-	} else {
-		signal(SIGTERM, benchmp_child_sigterm);
-	}
-	if (benchmp_sigterm_received)
-		benchmp_child_sigterm(SIGTERM);
+// 	if (benchmp_sigterm_handler != SIG_DFL) {
+// 		signal(SIGTERM, benchmp_sigterm_handler);
+// 	} else {
+// 		signal(SIGTERM, benchmp_child_sigterm);
+// 	}
+// 	if (benchmp_sigterm_received)
+// 		benchmp_child_sigterm(SIGTERM);
 
-	/* start experiments, collecting results */
-	insertinit(_benchmp_child_state.r);
+// 	/* start experiments, collecting results */
+// 	insertinit(_benchmp_child_state.r);
 
-	while (1) {
-		(*benchmark)(benchmp_interval(&_benchmp_child_state), cookie);
-	}
-}
+// 	while (1) {
+// 		(*benchmark)(benchmp_interval(&_benchmp_child_state), cookie);
+// 	}
+// }
 
-iter_t
-benchmp_interval(void* _state)
-{
-	char		c;
-	iter_t		iterations;
-	double		result;
-	fd_set		fds;
-	struct timeval	timeout;
-	benchmp_child_state* state = (benchmp_child_state*)_state;
+// iter_t
+// benchmp_interval(void* _state)
+// {
+// 	char		c;
+// 	iter_t		iterations;
+// 	double		result;
+// 	fd_set		fds;
+// 	struct timeval	timeout;
+// 	benchmp_child_state* state = (benchmp_child_state*)_state;
 
-	iterations = (state->state == timing_interval ? state->iterations : state->iterations_batch);
+// 	iterations = (state->state == timing_interval ? state->iterations : state->iterations_batch);
 
-	if (!state->need_warmup) {
-		result = stop(0,0);
-		if (state->cleanup) {
-			if (benchmp_sigchld_handler == SIG_DFL)
-				signal(SIGCHLD, SIG_DFL);
-			(*state->cleanup)(iterations, state->cookie);
-		}
-		save_n(state->iterations);
-		result -= t_overhead() + get_n() * l_overhead();
-		settime(result >= 0. ? (uint64)result : 0.);
-	}
+// 	if (!state->need_warmup) {
+// 		result = stop(0,0);
+// 		if (state->cleanup) {
+// 			if (benchmp_sigchld_handler == SIG_DFL)
+// 				signal(SIGCHLD, SIG_DFL);
+// 			(*state->cleanup)(iterations, state->cookie);
+// 		}
+// 		save_n(state->iterations);
+// 		result -= t_overhead() + get_n() * l_overhead();
+// 		settime(result >= 0. ? (uint64)result : 0.);
+// 	}
 
-	/* if the parent died, then give up */
-	if (getppid() == 1 && state->cleanup) {
-		if (benchmp_sigchld_handler == SIG_DFL)
-			signal(SIGCHLD, SIG_DFL);
-		(*state->cleanup)(0, state->cookie);
-		exit(0);
-	}
+// 	/* if the parent died, then give up */
+// 	if (getppid() == 1 && state->cleanup) {
+// 		if (benchmp_sigchld_handler == SIG_DFL)
+// 			signal(SIGCHLD, SIG_DFL);
+// 		(*state->cleanup)(0, state->cookie);
+// 		exit(0);
+// 	}
 
-	timeout.tv_sec = 0;
-	timeout.tv_usec = 0;
-	FD_ZERO(&fds);
+// 	timeout.tv_sec = 0;
+// 	timeout.tv_usec = 0;
+// 	FD_ZERO(&fds);
 
-	switch (state->state) {
-	case warmup:
-		iterations = state->iterations_batch;
-		FD_SET(state->start_signal, &fds);
-		select(state->start_signal+1, &fds, NULL,
-		       NULL, &timeout);
-		if (FD_ISSET(state->start_signal, &fds)) {
-			state->state = timing_interval;
-			read(state->start_signal, &c, sizeof(char));
-			iterations = state->iterations;
-		}
-		if (state->need_warmup) {
-			state->need_warmup = 0;
-			/* send 'ready' */
-			write(state->response, &c, sizeof(char));
-		}
-		break;
-	case timing_interval:
-		iterations = state->iterations;
-		if (state->parallel > 1 || result > 0.95 * state->enough) {
-			insertsort(gettime(), get_n(), get_results());
-			state->i++;
-			/* we completed all the experiments, return results */
-			if (state->i >= state->repetitions) {
-				state->state = cooldown;
-			}
-		}
-		if (state->parallel == 1 
-		    && (result < 0.99 * state->enough || result > 1.2 * state->enough)) {
-			if (result > 150.) {
-				double tmp = iterations / result;
-				tmp *= 1.1 * state->enough;
-				iterations = (iter_t)(tmp + 1);
-			} else {
-				iterations <<= 3;
-				if (iterations > 1<<27
-				    || result < 0. && iterations > 1<<20) {
-					state->state = cooldown;
-				}
-			}
-		}
-		state->iterations = iterations;
-		if (state->state == cooldown) {
-			/* send 'done' */
-			write(state->response, (void*)&c, sizeof(char));
-			iterations = state->iterations_batch;
-		}
-		break;
-	case cooldown:
-		iterations = state->iterations_batch;
-		FD_SET(state->result_signal, &fds);
-		select(state->result_signal+1, &fds, NULL, NULL, &timeout);
-		if (FD_ISSET(state->result_signal, &fds)) {
-			/* 
-			 * At this point all children have stopped their
-			 * measurement loops, so we can block waiting for
-			 * the parent to tell us to send our results back.
-			 * From this point on, we will do no more "work".
-			 */
-			read(state->result_signal, (void*)&c, sizeof(char));
-			write(state->response, (void*)get_results(), state->r_size);
-			if (state->cleanup) {
-				if (benchmp_sigchld_handler == SIG_DFL)
-					signal(SIGCHLD, SIG_DFL);
-				(*state->cleanup)(0, state->cookie);
-			}
+// 	switch (state->state) {
+// 	case warmup:
+// 		iterations = state->iterations_batch;
+// 		FD_SET(state->start_signal, &fds);
+// 		select(state->start_signal+1, &fds, NULL,
+// 		       NULL, &timeout);
+// 		if (FD_ISSET(state->start_signal, &fds)) {
+// 			state->state = timing_interval;
+// 			read(state->start_signal, &c, sizeof(char));
+// 			iterations = state->iterations;
+// 		}
+// 		if (state->need_warmup) {
+// 			state->need_warmup = 0;
+// 			/* send 'ready' */
+// 			write(state->response, &c, sizeof(char));
+// 		}
+// 		break;
+// 	case timing_interval:
+// 		iterations = state->iterations;
+// 		if (state->parallel > 1 || result > 0.95 * state->enough) {
+// 			insertsort(gettime(), get_n(), get_results());
+// 			state->i++;
+// 			/* we completed all the experiments, return results */
+// 			if (state->i >= state->repetitions) {
+// 				state->state = cooldown;
+// 			}
+// 		}
+// 		if (state->parallel == 1 
+// 		    && (result < 0.99 * state->enough || result > 1.2 * state->enough)) {
+// 			if (result > 150.) {
+// 				double tmp = iterations / result;
+// 				tmp *= 1.1 * state->enough;
+// 				iterations = (iter_t)(tmp + 1);
+// 			} else {
+// 				iterations <<= 3;
+// 				if (iterations > 1<<27
+// 				    || result < 0. && iterations > 1<<20) {
+// 					state->state = cooldown;
+// 				}
+// 			}
+// 		}
+// 		state->iterations = iterations;
+// 		if (state->state == cooldown) {
+// 			/* send 'done' */
+// 			write(state->response, (void*)&c, sizeof(char));
+// 			iterations = state->iterations_batch;
+// 		}
+// 		break;
+// 	case cooldown:
+// 		iterations = state->iterations_batch;
+// 		FD_SET(state->result_signal, &fds);
+// 		select(state->result_signal+1, &fds, NULL, NULL, &timeout);
+// 		if (FD_ISSET(state->result_signal, &fds)) {
+// 			/* 
+// 			 * At this point all children have stopped their
+// 			 * measurement loops, so we can block waiting for
+// 			 * the parent to tell us to send our results back.
+// 			 * From this point on, we will do no more "work".
+// 			 */
+// 			read(state->result_signal, (void*)&c, sizeof(char));
+// 			write(state->response, (void*)get_results(), state->r_size);
+// 			if (state->cleanup) {
+// 				if (benchmp_sigchld_handler == SIG_DFL)
+// 					signal(SIGCHLD, SIG_DFL);
+// 				(*state->cleanup)(0, state->cookie);
+// 			}
 
-			/* Now wait for signal to exit */
-			read(state->exit_signal, (void*)&c, sizeof(char));
-			exit(0);
-		}
-	};
-	if (state->initialize) {
-		(*state->initialize)(iterations, state->cookie);
-	}
-	start(0);
-	return (iterations);
-}
+// 			/* Now wait for signal to exit */
+// 			read(state->exit_signal, (void*)&c, sizeof(char));
+// 			exit(0);
+// 		}
+// 	};
+// 	if (state->initialize) {
+// 		(*state->initialize)(iterations, state->cookie);
+// 	}
+// 	start(0);
+// 	return (iterations);
+// }
 
 
-/*
- * Redirect output someplace else.
- */
-void
-timing(FILE *out)
-{
-	ftiming = out;
-}
+// /*
+//  * Redirect output someplace else.
+//  */
+// void
+// timing(FILE *out)
+// {
+// 	ftiming = out;
+// }
 
 /*
  * Start timing now.
@@ -790,9 +790,9 @@ start(struct timeval *tv)
 	if (tv == NULL) {
 		tv = &start_tv;
 	}
-#ifdef	RUSAGE
-	getrusage(RUSAGE_SELF, &ru_start);
-#endif
+// #ifdef	RUSAGE
+// 	getrusage(RUSAGE_SELF, &ru_start);
+// #endif
 	(void) gettimeofday(tv, (struct timezone *) 0);
 }
 
@@ -806,9 +806,9 @@ stop(struct timeval *begin, struct timeval *end)
 		end = &stop_tv;
 	}
 	(void) gettimeofday(end, (struct timezone *) 0);
-#ifdef	RUSAGE
-	getrusage(RUSAGE_SELF, &ru_stop);
-#endif
+// #ifdef	RUSAGE
+// 	getrusage(RUSAGE_SELF, &ru_stop);
+// #endif
 
 	if (begin == NULL) {
 		begin = &start_tv;

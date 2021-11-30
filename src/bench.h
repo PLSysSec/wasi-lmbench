@@ -24,20 +24,20 @@ typedef unsigned char bool_t;
 #endif
 #include        <sys/types.h>
 #ifndef WIN32
-#include        <sys/mman.h>
+// #include        <sys/mman.h>
 #endif
 #include        <sys/stat.h>
 #ifndef WIN32
-#include        <sys/wait.h>
+// #include        <sys/wait.h>
 #include	<time.h>
 #include        <sys/time.h>
 #include        <sys/socket.h>
 #include        <sys/un.h>
-#include        <sys/resource.h>
+// #include        <sys/resource.h>
 #define PORTMAP
-#include	<rpc/rpc.h>
+// #include	<rpc/rpc.h>
 #endif
-#include	<rpc/types.h>
+// #include	<rpc/types.h>
 
 #include 	<stdarg.h>
 #ifndef HAVE_uint
@@ -65,9 +65,9 @@ typedef long long int64;
 #include	"stats.h"
 #include	"timing.h"
 #include	"lib_debug.h"
-#include	"lib_tcp.h"
-#include	"lib_udp.h"
-#include	"lib_unix.h"
+// #include	"lib_tcp.h"
+// #include	"lib_udp.h"
+// #include	"lib_unix.h"
 
 
 #ifdef	DEBUG

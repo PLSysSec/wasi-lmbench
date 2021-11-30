@@ -47,7 +47,7 @@ LD = $(WASICLANG_ROOT)/bin/wasm-ld
 LDFLAGS = -Wl,--export-all -Wl,--growable-table
 NM = $(WASICLANG_ROOT)/bin/llvm-nm
 AR = $(WASICLANG_ROOT)/bin/llvm-ar
-RANLIB = $(WASICLANG_ROOT)/llvm-ranlib
+RANLIB = $(WASICLANG_ROOT)/bin/llvm-ranlib
 
 
 
@@ -248,7 +248,7 @@ $O/lmbench : ../scripts/lmbench bk.ver
 $O/lmbench.a: $(LIBOBJS)
 	/bin/rm -f $O/lmbench.a
 	$(AR) $(ARCREATE) $O/lmbench.a $(LIBOBJS)
-	-ranlib $O/lmbench.a
+	$(RANLIB) $O/lmbench.a
 
 $O/lib_timing.o : lib_timing.c $(INCS)
 	$(COMPILE) -c lib_timing.c -o $O/lib_timing.o
@@ -258,7 +258,7 @@ $O/lib_mem.o : lib_mem.c $(INCS)
 # 	$(COMPILE) -c lib_tcp.c -o $O/lib_tcp.o
 # $O/lib_udp.o : lib_udp.c $(INCS)
 # 	$(COMPILE) -c lib_udp.c -o $O/lib_udp.o
-# $O/lib_debug.o : lib_debug.c $(INCS)
+$O/lib_debug.o : lib_debug.c $(INCS)
 	$(COMPILE) -c lib_debug.c -o $O/lib_debug.o
 $O/lib_stats.o : lib_stats.c $(INCS)
 	$(COMPILE) -c lib_stats.c -o $O/lib_stats.o
