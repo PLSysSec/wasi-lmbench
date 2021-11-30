@@ -34,9 +34,26 @@
 # I finally know why Larry Wall's Makefile says "Grrrr".
 SHELL=/bin/sh
 
-CC=`../scripts/compiler`
+RLBOX_ROOT = ../../../rlbox_wasm2c_sandbox
+WASM2C_SRC_ROOT = $(RLBOX_ROOT)/build/_deps/mod_wasm2c-src/wasm2c
+WASM2C_BIN_ROOT = $(RLBOX_ROOT)/build/_deps/mod_wasm2c-src/bin
+
+WASICLANG_ROOT = $(RLBOX_ROOT)/build/_deps/wasiclang-src/build/install/opt/wasi-sdk
+WASILIBC_ROOT =  $(RLBOX_ROOT)/build/_deps/wasiclang-src/src/wasi-libc
+CC = $(WASICLANG_ROOT)/bin/clang                        
+CXX = $(WASICLANG_ROOT)/bin/clang++                   
+CFLAGS = --sysroot  $(WASILIBC_ROOT)/sysroot/ 
+LD = $(WASICLANG_ROOT)/bin/wasm-ld
+LDFLAGS = -Wl,--export-all -Wl,--growable-table
+NM = $(WASICLANG_ROOT)/bin/llvm-nm
+AR = $(WASICLANG_ROOT)/bin/llvm-ar
+RANLIB = $(WASICLANG_ROOT)/llvm-ranlib
+
+
+
+#CC=`../scripts/compiler`
 MAKE=`../scripts/make`
-AR=ar
+#AR=ar
 ARCREATE=cr
 
 # base of installation location
@@ -62,48 +79,42 @@ COMPILE=$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS)
 
 INCS =	bench.h lib_mem.h lib_tcp.h lib_udp.h stats.h timing.h
 
-SRCS =  bw_file_rd.c bw_mem.c bw_mmap_rd.c bw_pipe.c bw_tcp.c bw_udp.c	\
-	bw_unix.c							\
+SRCS =  bw_file_rd.c bw_mem.c bw_mmap_rd.c bw_tcp.c bw_udp.c	\
 	cache.c clock.c disk.c enough.c flushdisk.c getopt.c hello.c	\
-	lat_connect.c lat_ctx.c	lat_fcntl.c lat_fifo.c lat_fs.c 	\
-	lat_mem_rd.c lat_mmap.c lat_ops.c lat_pagefault.c lat_pipe.c 	\
-	lat_proc.c lat_rpc.c lat_select.c lat_sig.c lat_syscall.c	\
-	lat_tcp.c lat_udp.c lat_unix.c lat_unix_connect.c lat_sem.c	\
+	lat_connect.c lat_fcntl.c lat_fifo.c lat_fs.c 	\
+	lat_mem_rd.c lat_mmap.c lat_ops.c 	\
+	lat_rpc.c lat_syscall.c	\
+	lat_tcp.c lat_udp.c lat_sem.c	\
 	lat_usleep.c lat_pmake.c  					\
 	lib_debug.c lib_mem.c lib_stats.c lib_tcp.c lib_timing.c 	\
 	lib_udp.c lib_unix.c lib_sched.c				\
-	line.c lmdd.c lmhttp.c par_mem.c par_ops.c loop_o.c memsize.c 	\
-	mhz.c msleep.c rhttp.c seek.c timing_o.c tlb.c stream.c		\
+	line.c lmdd.c lmhttp.c loop_o.c memsize.c 	\
+	mhz.c msleep.c rhttp.c seek.c timing_o.c tlb.c		\
 	bench.h lib_debug.h lib_tcp.h lib_udp.h lib_unix.h names.h 	\
 	stats.h timing.h version.h
 
-ASMS =  $O/bw_file_rd.s $O/bw_mem.s $O/bw_mmap_rd.s $O/bw_pipe.s 	\
-	$O/bw_tcp.s $O/bw_udp.s $O/bw_unix.s $O/clock.s			\
+ASMS =  $O/bw_file_rd.s $O/bw_mem.s $O/bw_mmap_rd.s  	\
+	$O/bw_tcp.s $O/bw_udp.s $O/clock.s			\
 	$O/disk.s $O/enough.s $O/flushdisk.s $O/getopt.s $O/hello.s	\
-	$O/lat_connect.s $O/lat_ctx.s lat_fcntl.s $O/lat_fifo.s		\
+	$O/lat_connect.s lat_fcntl.s $O/lat_fifo.s		\
 	$O/lat_fs.s $O/lat_mem_rd.s $O/lat_mmap.s $O/lat_ops.s		\
-	$O/lat_pagefault.s $O/lat_pipe.s $O/lat_proc.s $O/lat_rpc.s	\
-	$O/lat_select.s $O/lat_sig.s $O/lat_syscall.s $O/lat_tcp.s	\
-	$O/lat_udp.s $O/lat_unix.s $O/lat_unix_connect.s $O/lat_sem.s	\
-	$O/lib_debug.s $O/lib_mem.s	\
+	$O/lat_rpc.s $O/lat_syscall.s $O/lat_tcp.s	\
+	$O/lat_udp.s $O/lat_sem.s $O/lib_debug.s $O/lib_mem.s	\
 	$O/lib_stats.s $O/lib_tcp.s $O/lib_timing.s $O/lib_udp.s	\
 	$O/lib_unix.s $O/lib_sched.s					\
-	$O/line.s $O/lmdd.s $O/lmhttp.s $O/par_mem.s	\
-	$O/par_ops.s $O/loop_o.s $O/memsize.s $O/mhz.s $O/msleep.s	\
-	$O/rhttp.s $O/timing_o.s $O/tlb.s $O/stream.s			\
+	$O/line.s $O/lmdd.s $O/lmhttp.s 	\
+	$O/loop_o.s $O/memsize.s $O/mhz.s $O/msleep.s	\
+	$O/rhttp.s $O/timing_o.s $O/tlb.s			\
 	$O/cache.s $O/lat_dram_page.s $O/lat_pmake.s $O/lat_rand.s	\
 	$O/lat_usleep.s $O/lat_cmd.s
-EXES =	$O/bw_file_rd $O/bw_mem $O/bw_mmap_rd $O/bw_pipe $O/bw_tcp 	\
-	$O/bw_unix $O/hello						\
-	$O/lat_select $O/lat_pipe $O/lat_rpc $O/lat_syscall $O/lat_tcp	\
-	$O/lat_udp $O/lat_mmap $O/mhz $O/lat_proc $O/lat_pagefault	\
-	$O/lat_connect $O/lat_fs $O/lat_sig $O/lat_mem_rd $O/lat_ctx	\
-	$O/lat_sem 							\
-	$O/memsize $O/lat_unix $O/lmdd $O/timing_o $O/enough		\
+EXES =	$O/bw_file_rd $O/bw_mem $O/bw_mmap_rd $O/bw_tcp 	\
+	$O/hello $O/lat_rpc $O/lat_syscall $O/lat_tcp	\
+	$O/lat_udp $O/lat_mmap $O/mhz 	\
+	$O/lat_connect $O/lat_fs $O/lat_mem_rd $O/lat_sem 	\
+	$O/memsize $O/lmdd $O/timing_o $O/enough		\
 	$O/msleep $O/loop_o $O/lat_fifo $O/lmhttp $O/lat_http		\
-	$O/lat_fcntl $O/disk $O/lat_unix_connect $O/flushdisk		\
-	$O/lat_ops $O/line $O/tlb $O/par_mem $O/par_ops 		\
-	$O/stream
+	$O/lat_fcntl $O/disk $O/flushdisk		\
+	$O/lat_ops $O/line $O/tlb
 OPT_EXES=$O/cache $O/lat_dram_page $O/lat_pmake $O/lat_rand 		\
 	$O/lat_usleep $O/lat_cmd
 LIBOBJS= $O/lib_tcp.o $O/lib_udp.o $O/lib_unix.o $O/lib_timing.o 	\
@@ -278,10 +289,6 @@ $O/mhz.s: mhz.c timing.h stats.h bench.h
 $O/mhz: mhz.c timing.h stats.h bench.h $O/lmbench.a
 	$(COMPILE) -o $O/mhz mhz.c $O/lmbench.a $(LDLIBS) -lm
 
-$O/lat_ctx.s: lat_ctx.c timing.h stats.h bench.h
-$O/lat_ctx: lat_ctx.c timing.h stats.h bench.h $O/lmbench.a
-	$(COMPILE) -o $O/lat_ctx lat_ctx.c $O/lmbench.a $(LDLIBS)
-
 $O/lmhttp.s:lmhttp.c timing.h stats.h bench.h
 $O/lmhttp:  lmhttp.c timing.h stats.h bench.h $O/lmbench.a
 	$(COMPILE) -o $O/lmhttp lmhttp.c $O/lmbench.a $(LDLIBS)
@@ -302,10 +309,6 @@ $O/bw_mmap_rd.s:bw_mmap_rd.c timing.h stats.h bench.h
 $O/bw_mmap_rd:  bw_mmap_rd.c timing.h stats.h bench.h $O/lmbench.a
 	$(COMPILE) -o $O/bw_mmap_rd bw_mmap_rd.c $O/lmbench.a $(LDLIBS)
 
-$O/bw_pipe.s:bw_pipe.c timing.h stats.h bench.h
-$O/bw_pipe:  bw_pipe.c timing.h stats.h bench.h $O/lmbench.a
-	$(COMPILE) -o $O/bw_pipe bw_pipe.c $O/lmbench.a $(LDLIBS)
-
 $O/bw_tcp.s:bw_tcp.c bench.h timing.h stats.h lib_tcp.h
 $O/bw_tcp:  bw_tcp.c bench.h timing.h stats.h lib_tcp.h $O/lmbench.a
 	$(COMPILE) -o $O/bw_tcp bw_tcp.c $O/lmbench.a $(LDLIBS)
@@ -313,10 +316,6 @@ $O/bw_tcp:  bw_tcp.c bench.h timing.h stats.h lib_tcp.h $O/lmbench.a
 $O/bw_udp.s:bw_udp.c bench.h timing.h stats.h lib_udp.h
 $O/bw_udp:  bw_udp.c bench.h timing.h stats.h lib_udp.h $O/lmbench.a
 	$(COMPILE) -o $O/bw_udp bw_udp.c $O/lmbench.a $(LDLIBS)
-
-$O/bw_unix.s:bw_unix.c timing.h stats.h bench.h
-$O/bw_unix:  bw_unix.c timing.h stats.h bench.h $O/lmbench.a
-	$(COMPILE) -o $O/bw_unix bw_unix.c $O/lmbench.a $(LDLIBS)
 
 $O/disk.s:disk.c flushdisk.c bench.h timing.h stats.h lib_tcp.h
 $O/disk:  disk.c flushdisk.c bench.h timing.h stats.h lib_tcp.h $O/lmbench.a
@@ -337,10 +336,6 @@ $O/lat_alarm:  lat_alarm.c timing.h stats.h bench.h $O/lmbench.a
 $O/lat_connect.s:lat_connect.c lib_tcp.c bench.h lib_tcp.h timing.h stats.h
 $O/lat_connect:  lat_connect.c lib_tcp.c bench.h lib_tcp.h timing.h stats.h $O/lmbench.a
 	$(COMPILE) -o $O/lat_connect lat_connect.c $O/lmbench.a $(LDLIBS)
-
-$O/lat_unix_connect.s:lat_unix_connect.c lib_tcp.c bench.h lib_tcp.h timing.h stats.h
-$O/lat_unix_connect:  lat_unix_connect.c lib_tcp.c bench.h lib_tcp.h timing.h stats.h $O/lmbench.a
-	$(COMPILE) -o $O/lat_unix_connect lat_unix_connect.c $O/lmbench.a $(LDLIBS)
 
 $O/lat_fs.s:lat_fs.c timing.h stats.h bench.h
 $O/lat_fs:  lat_fs.c timing.h stats.h bench.h $O/lmbench.a
@@ -378,37 +373,17 @@ $O/lat_ops.s:lat_ops.c timing.h stats.h bench.h
 $O/lat_ops:  lat_ops.c timing.h stats.h bench.h $O/lmbench.a
 	$(COMPILE) -o $O/lat_ops lat_ops.c $O/lmbench.a $(LDLIBS)
 
-$O/lat_pagefault.s:lat_pagefault.c timing.h stats.h bench.h
-$O/lat_pagefault:  lat_pagefault.c timing.h stats.h bench.h $O/lmbench.a
-	$(COMPILE) -o $O/lat_pagefault lat_pagefault.c $O/lmbench.a $(LDLIBS)
-
-$O/lat_pipe.s:lat_pipe.c timing.h stats.h bench.h
-$O/lat_pipe:  lat_pipe.c timing.h stats.h bench.h $O/lmbench.a
-	$(COMPILE) -o $O/lat_pipe lat_pipe.c $O/lmbench.a $(LDLIBS)
-
 $O/lat_fifo.s:lat_fifo.c timing.h stats.h bench.h
 $O/lat_fifo:  lat_fifo.c timing.h stats.h bench.h $O/lmbench.a
 	$(COMPILE) -o $O/lat_fifo lat_fifo.c $O/lmbench.a $(LDLIBS)
-
-$O/lat_proc.s:lat_proc.c timing.h stats.h bench.h
-$O/lat_proc:  lat_proc.c timing.h stats.h bench.h $O/lmbench.a
-	$(COMPILE) -o $O/lat_proc lat_proc.c $O/lmbench.a $(LDLIBS)
 
 $O/lat_rpc.s:lat_rpc.c timing.h stats.h bench.h
 $O/lat_rpc:  lat_rpc.c timing.h stats.h bench.h $O/lmbench.a
 	$(COMPILE) -o $O/lat_rpc lat_rpc.c $O/lmbench.a $(LDLIBS)
 
-$O/lat_sig.s:lat_sig.c timing.h stats.h bench.h
-$O/lat_sig:  lat_sig.c timing.h stats.h bench.h $O/lmbench.a
-	$(COMPILE) -o $O/lat_sig lat_sig.c $O/lmbench.a $(LDLIBS)
-
 $O/lat_syscall.s:lat_syscall.c timing.h stats.h bench.h
 $O/lat_syscall:  lat_syscall.c timing.h stats.h bench.h $O/lmbench.a
 	$(COMPILE) -o $O/lat_syscall lat_syscall.c $O/lmbench.a $(LDLIBS)
-
-$O/lat_select.s:  lat_select.c timing.h stats.h bench.h
-$O/lat_select:  lat_select.c timing.h stats.h bench.h $O/lmbench.a
-	$(COMPILE) -o $O/lat_select lat_select.c $O/lmbench.a $(LDLIBS)
 
 $O/lat_tcp.s:lat_tcp.c timing.h stats.h bench.h lib_tcp.h
 $O/lat_tcp:  lat_tcp.c timing.h stats.h bench.h lib_tcp.h $O/lmbench.a
@@ -417,10 +392,6 @@ $O/lat_tcp:  lat_tcp.c timing.h stats.h bench.h lib_tcp.h $O/lmbench.a
 $O/lat_udp.s:lat_udp.c timing.h stats.h bench.h lib_udp.h
 $O/lat_udp:  lat_udp.c timing.h stats.h bench.h lib_udp.h $O/lmbench.a
 	$(COMPILE) -o $O/lat_udp lat_udp.c $O/lmbench.a $(LDLIBS)
-
-$O/lat_unix.s:lat_unix.c timing.h stats.h bench.h
-$O/lat_unix:  lat_unix.c timing.h stats.h bench.h $O/lmbench.a
-	$(COMPILE) -o $O/lat_unix lat_unix.c $O/lmbench.a $(LDLIBS)
 
 $O/lib_tcp.s:lib_tcp.c bench.h lib_tcp.h
 $O/lib_tcp:  lib_tcp.c bench.h lib_tcp.h $O/lmbench.a
@@ -466,25 +437,9 @@ $O/cache.s:cache.c timing.h stats.h bench.h
 $O/cache:  cache.c timing.h stats.h bench.h $O/lmbench.a
 	$(COMPILE) -o $O/cache cache.c $O/lmbench.a $(LDLIBS)
 
-$O/par_mem.s:par_mem.c timing.h stats.h bench.h
-$O/par_mem:  par_mem.c timing.h stats.h bench.h $O/lmbench.a
-	$(COMPILE) -o $O/par_mem par_mem.c $O/lmbench.a $(LDLIBS)
-
-$O/par_ops.s:par_ops.c timing.h stats.h bench.h
-$O/par_ops:  par_ops.c timing.h stats.h bench.h $O/lmbench.a
-	$(COMPILE) -o $O/par_ops par_ops.c $O/lmbench.a $(LDLIBS)
-
-$O/stream.s:stream.c timing.h stats.h bench.h
-$O/stream:  stream.c timing.h stats.h bench.h $O/lmbench.a
-	$(COMPILE) -o $O/stream stream.c $O/lmbench.a $(LDLIBS)
-
 $O/lat_sem.s:lat_sem.c timing.h stats.h bench.h
 $O/lat_sem:  lat_sem.c timing.h stats.h bench.h $O/lmbench.a
 	$(COMPILE) -o $O/lat_sem lat_sem.c $O/lmbench.a $(LDLIBS)
-
-$O/par_list.s:par_list.c timing.h stats.h bench.h
-$O/par_list:  par_list.c timing.h stats.h bench.h $O/lmbench.a
-	$(COMPILE) -o $O/par_list par_list.c $O/lmbench.a $(LDLIBS)
 
 $O/lat_dram_page.s:lat_dram_page.c timing.h stats.h bench.h
 $O/lat_dram_page:  lat_dram_page.c timing.h stats.h bench.h $O/lmbench.a
