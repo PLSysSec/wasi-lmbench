@@ -66,12 +66,12 @@ static		void	init_timing(void);
 
 // #endif	/* RUSAGE */
 
-// void
-// lmbench_usage(int argc, char *argv[], char* usage)
-// {
-// 	fprintf(stderr,"Usage: %s %s", argv[0], usage);
-// 	exit(-1);
-// }
+void
+lmbench_usage(int argc, char *argv[], char* usage)
+{
+	fprintf(stderr,"Usage: %s %s", argv[0], usage);
+	exit(-1);
+}
 
 
 // void
@@ -149,159 +149,82 @@ static		void	init_timing(void);
 // int
 // sizeof_result(int repetitions);
 
-// void 
-// benchmp(benchmp_f initialize, 
-// 	benchmp_f benchmark,
-// 	benchmp_f cleanup,
-// 	int enough, 
-// 	int parallel,
-// 	int warmup,
-// 	int repetitions,
-// 	void* cookie)
-// {
-// 	iter_t		iterations = 1;
-// 	double		result = 0.;
-// 	double		usecs;
-// 	long		i, j;
-// 	pid_t		pid;
-// 	pid_t		*pids = NULL;
-// 	int		response[2];
-// 	int		start_signal[2];
-// 	int		result_signal[2];
-// 	int		exit_signal[2];
-// 	int		need_warmup;
-// 	fd_set		fds;
-// 	struct timeval	timeout;
+
+// This function enable parallel benchmarking
+// Since Wasm cannot handle process-level parallelism, I have changed this to 
+// basically be a noop (besides some intialization)
+void 
+benchmp(benchmp_f initialize, 
+	benchmp_f benchmark,
+	benchmp_f cleanup,
+	int enough, 
+	int parallel,
+	int warmup,
+	int repetitions,
+	void* cookie)
+{
+	iter_t		iterations = 1;
+	double		result = 0.;
+	double		usecs;
+	long		i, j;
+	pid_t		pid;
+	pid_t		*pids = NULL;
+	int		response[2];
+	int		start_signal[2];
+	int		result_signal[2];
+	int		exit_signal[2];
+	int		need_warmup;
+	fd_set		fds;
+	struct timeval	timeout;
 
 // #ifdef _DEBUG
 // 	fprintf(stderr, "benchmp(%p, %p, %p, %d, %d, %d, %d, %p): entering\n", initialize, benchmark, cleanup, enough, parallel, warmup, repetitions, cookie);
 // #endif
-// 	enough = get_enough(enough);
+	// enough = get_enough(enough);
 // #ifdef _DEBUG
 // 	fprintf(stderr, "\tenough=%d\n", enough);
 // #endif
 
-// 	/* initialize results */
-// 	settime(0);
-// 	save_n(1);
+	/* initialize results */
+	settime(0);
+	save_n(1);
 
-// 	if (parallel > 1) {
-// 		/* Compute the baseline performance */
-// 		benchmp(initialize, benchmark, cleanup, 
-// 			enough, 1, warmup, repetitions, cookie);
-
-// 		/* if we can't even do a single job, then give up */
-// 		if (gettime() == 0)
-// 			return;
-
-// 		/* calculate iterations for 1sec runtime */
-// 		iterations = get_n();
-// 		if (enough < SHORT) {
-// 			double tmp = (double)SHORT * (double)get_n();
-// 			tmp /= (double)gettime();
-// 			iterations = (iter_t)tmp + 1;
-// 		}
-// 		settime(0);
-// 		save_n(1);
-// 	}
-
-// 	/* Create the necessary pipes for control */
-// 	if (pipe(response) < 0
-// 	    || pipe(start_signal) < 0
-// 	    || pipe(result_signal) < 0
-// 	    || pipe(exit_signal) < 0) {
-// #ifdef _DEBUG
-// 		fprintf(stderr, "BENCHMP: Could not create control pipes\n");
-// #endif /* _DEBUG */
-// 		return;
-// 	}
-
-// 	/* fork the necessary children */
-// 	benchmp_sigchld_received = 0;
-// 	benchmp_sigterm_received = 0;
-// 	benchmp_sigterm_handler = signal(SIGTERM, benchmp_sigterm);
-// 	benchmp_sigchld_handler = signal(SIGCHLD, benchmp_sigchld);
-// 	pids = (pid_t*)malloc(parallel * sizeof(pid_t));
-// 	if (!pids) return;
-// 	bzero((void*)pids, parallel * sizeof(pid_t));
-
-// 	for (i = 0; i < parallel; ++i) {
-// 		if (benchmp_sigterm_received)
-// 			goto error_exit;
-// #ifdef _DEBUG
-// 		fprintf(stderr, "benchmp(%p, %p, %p, %d, %d, %d, %d, %p): creating child %d\n", initialize, benchmark, cleanup, enough, parallel, warmup, repetitions, cookie, i);
-// #endif
-// 		switch(pids[i] = fork()) {
-// 		case -1:
-// 			/* could not open enough children! */
-// #ifdef _DEBUG
-// 			fprintf(stderr, "BENCHMP: fork() failed!\n");
-// #endif /* _DEBUG */
-// 			goto error_exit;
-// 		case 0:
-// 			/* If child */
-// 			close(response[0]);
-// 			close(start_signal[1]);
-// 			close(result_signal[1]);
-// 			close(exit_signal[1]);
-// 			handle_scheduler(i, 0, 0);
-// 			benchmp_child(initialize, 
-// 				      benchmark, 
-// 				      cleanup, 
-// 				      i,
-// 				      response[1], 
-// 				      start_signal[0], 
-// 				      result_signal[0], 
-// 				      exit_signal[0],
-// 				      enough,
-// 				      iterations,
-// 				      parallel,
-// 				      repetitions,
-// 				      cookie
-// 				);
-// 			exit(0);
-// 		default:
-// 			break;
-// 		}
-// 	}
-// 	close(response[1]);
-// 	close(start_signal[0]);
-// 	close(result_signal[0]);
-// 	close(exit_signal[0]);
-// 	benchmp_parent(response[0], 
-// 		       start_signal[1], 
-// 		       result_signal[1], 
-// 		       exit_signal[1],
-// 		       pids,
-// 		       parallel, 
-// 		       iterations,
-// 		       warmup,
-// 		       repetitions,
-// 		       enough
-// 		);
-// 	goto cleanup_exit;
+	// benchmp_parent(response[0], 
+	// 	       start_signal[1], 
+	// 	       result_signal[1], 
+	// 	       exit_signal[1],
+	// 	       pids,
+	// 	       parallel, 
+	// 	       iterations,
+	// 	       warmup,
+	// 	       repetitions,
+	// 	       enough
+	// 	);
+	return;
+}
+	//goto cleanup_exit;
 
 // error_exit:
-// 	/* give the children a chance to clean up gracefully */
-// 	signal(SIGCHLD, SIG_DFL);
-// 	while (--i >= 0) {
-// 		kill(pids[i], SIGTERM);
-// 		waitpid(pids[i], NULL, 0);
-// 	}
+	/* give the children a chance to clean up gracefully */
+	// signal(SIGCHLD, SIG_DFL);
+	// while (--i >= 0) {
+	// 	kill(pids[i], SIGTERM);
+	// 	waitpid(pids[i], NULL, 0);
+	//}
 
 // cleanup_exit:
-// 	/* 
-// 	 * Clean up and kill all children
-// 	 *
-// 	 * NOTE: the children themselves SHOULD exit, and
-// 	 *   Killing them could prevent them from
-// 	 *   cleanup up subprocesses, etc... So, we only
-// 	 *   want to kill child processes when it appears
-// 	 *   that they will not die of their own accord.
-// 	 *   We wait twice the timing interval plus two seconds
-// 	 *   for children to die.  If they haven't died by 
-// 	 *   that time, then we start killing them.
-// 	 */
+	/* 
+	 * Clean up and kill all children
+	 *
+	 * NOTE: the children themselves SHOULD exit, and
+	 *   Killing them could prevent them from
+	 *   cleanup up subprocesses, etc... So, we only
+	 *   want to kill child processes when it appears
+	 *   that they will not die of their own accord.
+	 *   We wait twice the timing interval plus two seconds
+	 *   for children to die.  If they haven't died by 
+	 *   that time, then we start killing them.
+	 */
 // 	benchmp_sigalrm_timeout = (int)((2 * enough)/1000000) + 2;
 // 	if (benchmp_sigalrm_timeout < 5)
 // 		benchmp_sigalrm_timeout = 5;
@@ -322,7 +245,7 @@ static		void	init_timing(void);
 // #ifdef _DEBUG
 // 	fprintf(stderr, "benchmp(0x%x, 0x%x, 0x%x, %d, %d, 0x%x): exiting\n", (unsigned int)initialize, (unsigned int)benchmark, (unsigned int)cleanup, enough, parallel, (unsigned int)cookie);
 // #endif
-// }
+//}
 
 // void
 // benchmp_parent(	int response, 
@@ -1635,43 +1558,43 @@ touch(char *buf, int nbytes)
 	}
 }
 
-size_t*
-permutation(int max, int scale)
-{
-	size_t	i, v;
-	static size_t r = 0;
-	size_t*	result = (size_t*)malloc(max * sizeof(size_t));
+// size_t*
+// permutation(int max, int scale)
+// {
+// 	size_t	i, v;
+// 	static size_t r = 0;
+// 	size_t*	result = (size_t*)malloc(max * sizeof(size_t));
 
-	if (result == NULL) return NULL;
+// 	if (result == NULL) return NULL;
 
-	for (i = 0; i < max; ++i) {
-		result[i] = i * (size_t)scale;
-	}
+// 	for (i = 0; i < max; ++i) {
+// 		result[i] = i * (size_t)scale;
+// 	}
 
-	if (r == 0)
-		r = (getpid()<<6) ^ getppid() ^ rand() ^ (rand()<<10);
+// 	if (r == 0)
+// 		r = (getpid()<<6) ^ getppid() ^ rand() ^ (rand()<<10);
 
-	/* randomize the sequence */
-	for (i = max - 1; i > 0; --i) {
-		r = (r << 1) ^ rand();
-		v = result[r % (i + 1)];
-		result[r % (i + 1)] = result[i];
-		result[i] = v;
-	}
+// 	/* randomize the sequence */
+// 	for (i = max - 1; i > 0; --i) {
+// 		r = (r << 1) ^ rand();
+// 		v = result[r % (i + 1)];
+// 		result[r % (i + 1)] = result[i];
+// 		result[i] = v;
+// 	}
 
-#ifdef _DEBUG
-	fprintf(stderr, "permutation(%d): {", max);
-	for (i = 0; i < max; ++i) {
-	  fprintf(stderr, "%d", result[i]);
-	  if (i < max - 1) 
-	    fprintf(stderr, ",");
-	}
-	fprintf(stderr, "}\n");
-	fflush(stderr);
-#endif /* _DEBUG */
+// #ifdef _DEBUG
+// 	fprintf(stderr, "permutation(%d): {", max);
+// 	for (i = 0; i < max; ++i) {
+// 	  fprintf(stderr, "%d", result[i]);
+// 	  if (i < max - 1) 
+// 	    fprintf(stderr, ",");
+// 	}
+// 	fprintf(stderr, "}\n");
+// 	fflush(stderr);
+// #endif /* _DEBUG */
 
-	return (result);
-}
+// 	return (result);
+// }
 
 int
 cp(char* src, char* dst, mode_t mode)

@@ -44,7 +44,7 @@ CC = $(WASICLANG_ROOT)/bin/clang
 CXX = $(WASICLANG_ROOT)/bin/clang++                   
 CFLAGS = --sysroot  $(WASILIBC_ROOT)/sysroot/ 
 LD = $(WASICLANG_ROOT)/bin/wasm-ld
-LDFLAGS = -Wl,--export-all -Wl,--growable-table
+LDFLAGS = -Wl,--export-all -Wl,--growable-table 
 NM = $(WASICLANG_ROOT)/bin/llvm-nm
 AR = $(WASICLANG_ROOT)/bin/llvm-ar
 RANLIB = $(WASICLANG_ROOT)/bin/llvm-ranlib
@@ -77,7 +77,7 @@ SAMPLES=lmbench/Results/aix/rs6000 lmbench/Results/hpux/snake \
 
 COMPILE=$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS)
 
-INCS =	bench.h lib_mem.h stats.h timing.h
+INCS =	bench.h lib_mem.h stats.h timing.h lib_dummy.h
 #  lib_tcp.h lib_udp.h
 
 SRCS =  bw_file_rd.c bw_mem.c 	\
@@ -117,7 +117,7 @@ EXES =	$O/bw_file_rd $O/bw_mem 	\
 #	$O/bw_tcp  $O/lat_udp $O/lat_connect $O/lmhttp $O/lat_http
 OPT_EXES=$O/cache $O/lat_dram_page $O/lat_pmake $O/lat_rand 		\
 	$O/lat_usleep $O/lat_cmd
-LIBOBJS=  $O/lib_timing.o 	\
+LIBOBJS=  $O/lib_timing.o $O/lib_dummy.o	\
 	$O/lib_mem.o $O/lib_stats.o $O/lib_debug.o $O/getopt.o		\
 	$O/lib_sched.o
 #$O/lib_tcp.o $O/lib_udp.o
@@ -250,6 +250,9 @@ $O/lmbench.a: $(LIBOBJS)
 	$(AR) $(ARCREATE) $O/lmbench.a $(LIBOBJS)
 	$(RANLIB) $O/lmbench.a
 
+
+$O/lib_dummy.o : lib_dummy.c $(INCS)
+	$(COMPILE) -c lib_dummy.c -o $O/lib_dummy.o
 $O/lib_timing.o : lib_timing.c $(INCS)
 	$(COMPILE) -c lib_timing.c -o $O/lib_timing.o
 $O/lib_mem.o : lib_mem.c $(INCS)
@@ -296,7 +299,7 @@ $O/mhz: mhz.c timing.h stats.h bench.h $O/lmbench.a
 # $O/lat_http:  lat_http.c timing.h stats.h bench.h $O/lmbench.a
 # 	$(COMPILE) -o $O/lat_http lat_http.c $O/lmbench.a $(LDLIBS)
 
-$O/bw_file_rd.s:bw_file_rd.c timing.h stats.h bench.h
+$O/bw_file_rd.s:bw_file_rd.c timing.h stats.h bench.h 
 $O/bw_file_rd:  bw_file_rd.c timing.h stats.h bench.h $O/lmbench.a
 	$(COMPILE) -o $O/bw_file_rd bw_file_rd.c $O/lmbench.a $(LDLIBS)
 
