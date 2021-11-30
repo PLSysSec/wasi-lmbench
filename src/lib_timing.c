@@ -1558,43 +1558,43 @@ touch(char *buf, int nbytes)
 	}
 }
 
-// size_t*
-// permutation(int max, int scale)
-// {
-// 	size_t	i, v;
-// 	static size_t r = 0;
-// 	size_t*	result = (size_t*)malloc(max * sizeof(size_t));
+size_t*
+permutation(int max, int scale)
+{
+	size_t	i, v;
+	static size_t r = 0;
+	size_t*	result = (size_t*)malloc(max * sizeof(size_t));
 
-// 	if (result == NULL) return NULL;
+	if (result == NULL) return NULL;
 
-// 	for (i = 0; i < max; ++i) {
-// 		result[i] = i * (size_t)scale;
-// 	}
+	for (i = 0; i < max; ++i) {
+		result[i] = i * (size_t)scale;
+	}
 
-// 	if (r == 0)
-// 		r = (getpid()<<6) ^ getppid() ^ rand() ^ (rand()<<10);
+	if (r == 0)
+		r = (getpid()<<6) ^ getppid() ^ rand() ^ (rand()<<10);
 
-// 	/* randomize the sequence */
-// 	for (i = max - 1; i > 0; --i) {
-// 		r = (r << 1) ^ rand();
-// 		v = result[r % (i + 1)];
-// 		result[r % (i + 1)] = result[i];
-// 		result[i] = v;
-// 	}
+	/* randomize the sequence */
+	for (i = max - 1; i > 0; --i) {
+		r = (r << 1) ^ rand();
+		v = result[r % (i + 1)];
+		result[r % (i + 1)] = result[i];
+		result[i] = v;
+	}
 
-// #ifdef _DEBUG
-// 	fprintf(stderr, "permutation(%d): {", max);
-// 	for (i = 0; i < max; ++i) {
-// 	  fprintf(stderr, "%d", result[i]);
-// 	  if (i < max - 1) 
-// 	    fprintf(stderr, ",");
-// 	}
-// 	fprintf(stderr, "}\n");
-// 	fflush(stderr);
-// #endif /* _DEBUG */
+#ifdef _DEBUG
+	fprintf(stderr, "permutation(%d): {", max);
+	for (i = 0; i < max; ++i) {
+	  fprintf(stderr, "%d", result[i]);
+	  if (i < max - 1) 
+	    fprintf(stderr, ",");
+	}
+	fprintf(stderr, "}\n");
+	fflush(stderr);
+#endif /* _DEBUG */
 
-// 	return (result);
-// }
+	return (result);
+}
 
 int
 cp(char* src, char* dst, mode_t mode)

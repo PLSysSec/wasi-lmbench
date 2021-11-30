@@ -36,7 +36,7 @@ typedef     enum {USLEEP, NANOSLEEP, SELECT, PSELECT, ITIMER} timer_e;
 
 uint64          caught,
                 n;
-struct itimerval value;
+// struct itimerval value;
 
 typedef struct _state {
     unsigned long usecs;
@@ -70,95 +70,95 @@ bench_nanosleep(iter_t iterations, void *cookie)
     }
 }
 
-void
-bench_select(iter_t iterations, void *cookie)
-{
-    state_t        *state = (state_t*)cookie;
-    struct timeval  tv;
+// void
+// bench_select(iter_t iterations, void *cookie)
+// {
+//     state_t        *state = (state_t*)cookie;
+//     struct timeval  tv;
 
-    while (iterations-- > 0) {
-	tv.tv_sec = 0;
-	tv.tv_usec = state->usecs;
-	select(0, NULL, NULL, NULL, &tv);
-    }
-}
+//     while (iterations-- > 0) {
+// 	tv.tv_sec = 0;
+// 	tv.tv_usec = state->usecs;
+// 	select(0, NULL, NULL, NULL, &tv);
+//     }
+// }
 
-#ifdef _POSIX_SELECT
-void
-bench_pselect(iter_t iterations, void *cookie)
-{
-    state_t        *state = (state_t*)cookie;
-    struct timespec ts;
+// #ifdef _POSIX_SELECT
+// void
+// bench_pselect(iter_t iterations, void *cookie)
+// {
+//     state_t        *state = (state_t*)cookie;
+//     struct timespec ts;
 
-    while (iterations-- > 0) {
-	ts.tv_sec = 0;
-	ts.tv_nsec = state->usecs * 1000;
-	pselect(0, NULL, NULL, NULL, &ts, NULL);
-    }
-}
-#endif /* _POSIX_SELECT */
+//     while (iterations-- > 0) {
+// 	ts.tv_sec = 0;
+// 	ts.tv_nsec = state->usecs * 1000;
+// 	pselect(0, NULL, NULL, NULL, &ts, NULL);
+//     }
+// }
+// #endif /* _POSIX_SELECT */
 
-void
-interval()
-{
-    if (++caught == n) {
-	caught = 0;
-	n = benchmp_interval(benchmp_getstate());
-    }
+// void
+// interval()
+// {
+//     if (++caught == n) {
+// 	caught = 0;
+// 	n = benchmp_interval(benchmp_getstate());
+//     }
 
-    setitimer(ITIMER_REAL, &value, NULL);
-}
+//     setitimer(ITIMER_REAL, &value, NULL);
+// }
 
 void
 initialize(iter_t iterations, void *cookie)
 {
     state_t        *state = (state_t*)cookie;
     struct sigaction sa;
+    return;
+    // if (iterations) return;
 
-    if (iterations) return;
+    // value.it_interval.tv_sec = 0;
+    // value.it_interval.tv_usec = state->usecs;
+    // value.it_value.tv_sec = 0;
+    // value.it_value.tv_usec = state->usecs;
 
-    value.it_interval.tv_sec = 0;
-    value.it_interval.tv_usec = state->usecs;
-    value.it_value.tv_sec = 0;
-    value.it_value.tv_usec = state->usecs;
-
-    sa.sa_handler = interval;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = 0;
-    sigaction(SIGALRM, &sa, 0);
+    // sa.sa_handler = interval;
+    // sigemptyset(&sa.sa_mask);
+    // sa.sa_flags = 0;
+    // sigaction(SIGALRM, &sa, 0);
 }
 
-void
-bench_itimer(iter_t iterations, void *cookie)
-{
-    n = iterations;
-    caught = 0;
+// void
+// bench_itimer(iter_t iterations, void *cookie)
+// {
+//     n = iterations;
+//     caught = 0;
 
-    /*
-     * start the first timing interval 
-     */
-    start(0);
+//     /*
+//      * start the first timing interval 
+//      */
+//     start(0);
 
-    /*
-     * create the first timer, causing us to jump to interval() 
-     */
-    setitimer(ITIMER_REAL, &value, NULL);
+//     /*
+//      * create the first timer, causing us to jump to interval() 
+//      */
+//     setitimer(ITIMER_REAL, &value, NULL);
 
-    while (1) {
-	sleep(100000);
-    }
-}
+//     while (1) {
+// 	sleep(100000);
+//     }
+// }
 
-int
-set_realtime()
-{
-    struct sched_param sp;
+// int
+// set_realtime()
+// {
+//     struct sched_param sp;
 
-    sp.sched_priority = sched_get_priority_max(SCHED_RR);
-    if (sched_setscheduler(0, SCHED_RR, &sp) >= 0) return TRUE;
-    perror("sched_setscheduler");
-    return FALSE;
-}
+//     sp.sched_priority = sched_get_priority_max(SCHED_RR);
+//     if (sched_setscheduler(0, SCHED_RR, &sp) >= 0) return TRUE;
+//     perror("sched_setscheduler");
+//     return FALSE;
+// }
 
 int
 main(int ac, char **av)
@@ -179,9 +179,9 @@ main(int ac, char **av)
 
     while ((c = getopt(ac, av, "ru:W:N:")) != EOF) {
 	switch (c) {
-	case 'r':
-	    realtime = 1;
-	    break;
+	// case 'r':
+	//     realtime = 1;
+	//     break;
 	case 'u':
 	    if (strcmp(optarg, "usleep") == 0) {
 		what = USLEEP;
@@ -189,17 +189,17 @@ main(int ac, char **av)
 	    } else if (strcmp(optarg, "nanosleep") == 0) {
 		what = NANOSLEEP;
 		mechanism = "nanosleep";
-	    } else if (strcmp(optarg, "select") == 0) {
-		what = SELECT;
-		mechanism = "select";
-#ifdef _POSIX_SELECT
-	    } else if (strcmp(optarg, "pselect") == 0) {
-		what = PSELECT;
-		mechanism = "pselect";
-#endif /* _POSIX_SELECT */
-	    } else if (strcmp(optarg, "itimer") == 0) {
-		what = ITIMER;
-		mechanism = "itimer";
+	    // } else if (strcmp(optarg, "select") == 0) {
+		// what = SELECT;
+		// mechanism = "select";
+// #ifdef _POSIX_SELECT
+// 	    } else if (strcmp(optarg, "pselect") == 0) {
+// 		what = PSELECT;
+// 		mechanism = "pselect";
+// #endif /* _POSIX_SELECT */
+// 	    } else if (strcmp(optarg, "itimer") == 0) {
+// 		what = ITIMER;
+// 		mechanism = "itimer";
 	    } else {
 		lmbench_usage(ac, av, usage);
 	    }
@@ -224,7 +224,7 @@ main(int ac, char **av)
     }
 
     state.usecs = bytes(av[optind]);
-    if (realtime && set_realtime()) scheduler = "realtime ";
+    // if (realtime && set_realtime()) scheduler = "realtime ";
 
     switch (what) {
     case USLEEP:
@@ -235,20 +235,20 @@ main(int ac, char **av)
 	benchmp(NULL, bench_nanosleep, NULL, 
 		0, parallel, warmup, repetitions, &state);
 	break;
-    case SELECT:
-	benchmp(NULL, bench_select, NULL, 
-		0, parallel, warmup, repetitions, &state);
-	break;
-#ifdef _POSIX_SELECT
-    case PSELECT:
-	benchmp(NULL, bench_pselect, NULL, 
-		0, parallel, warmup, repetitions, &state);
-	break;
-#endif /* _POSIX_SELECT */
-    case ITIMER:
-	benchmp(initialize, bench_itimer, NULL, 
-		0, parallel, warmup, repetitions, &state);
-	break;
+//     case SELECT:
+// 	benchmp(NULL, bench_select, NULL, 
+// 		0, parallel, warmup, repetitions, &state);
+// 	break;
+// #ifdef _POSIX_SELECT
+//     case PSELECT:
+// 	benchmp(NULL, bench_pselect, NULL, 
+// 		0, parallel, warmup, repetitions, &state);
+// 	break;
+// #endif /* _POSIX_SELECT */
+//     case ITIMER:
+// 	benchmp(initialize, bench_itimer, NULL, 
+// 		0, parallel, warmup, repetitions, &state);
+// 	break;
     default:
 	lmbench_usage(ac, av, usage);
 	break;

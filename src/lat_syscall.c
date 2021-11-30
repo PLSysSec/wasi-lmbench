@@ -16,14 +16,17 @@ struct _state {
 	char* file;
 };
 
+// instead of getppid (which would be emulated in lib_dummy)
+// instead use sched_yield as a null syscall
 void
-do_getppid(iter_t iterations, void *cookie)
+do_null_syscall(iter_t iterations, void *cookie)
 {
 	struct _state *pState = (struct _state*)cookie;
 	char	c;
 
 	while (iterations-- > 0) {
-		getppid();
+		//getppid();
+		__wasi_sched_yield();
 	}
 }
 
@@ -135,7 +138,7 @@ main(int ac, char **av)
 		state.file = av[optind + 1];
 
 	if (!strcmp("null", av[optind])) {
-		benchmp(NULL, do_getppid, NULL, 0, parallel, 
+		benchmp(NULL, do_null_syscall, NULL, 0, parallel, 
 			warmup, repetitions, &state);
 		micro("Simple syscall", get_n());
 	} else if (!strcmp("write", av[optind])) {
