@@ -49,7 +49,9 @@ NM = $(WASICLANG_ROOT)/bin/llvm-nm
 AR = $(WASICLANG_ROOT)/bin/llvm-ar
 RANLIB = $(WASICLANG_ROOT)/bin/llvm-ranlib
 VERIWASI_ROOT = ../../..
-WASM2C_NATIVE_FLAGS = -shared -fPIC -O3 -I$(WASM2C_SRC_ROOT) $(WASM2C_SRC_ROOT)/wasm-rt-impl.c $(WASM2C_SRC_ROOT)/wasm-rt-os-unix.c $(WASM2C_SRC_ROOT)/wasm-rt-os-win.c $(WASM2C_SRC_ROOT)/wasm-rt-wasi.c $(VERIWASI_ROOT)/target/release/libveriwasi.so -I$(VERIWASI_ROOT)/bindings
+# Using O0 for debuggability. 
+# This should not affect results since we are benchmarking the runtime not the compiled Wasm code
+WASM2C_NATIVE_FLAGS = -shared -fPIC -O0 -I$(WASM2C_SRC_ROOT) $(WASM2C_SRC_ROOT)/wasm-rt-impl.c $(WASM2C_SRC_ROOT)/wasm-rt-os-unix.c $(WASM2C_SRC_ROOT)/wasm-rt-os-win.c $(WASM2C_SRC_ROOT)/wasm-rt-wasi.c -L$(VERIWASI_ROOT)/target/release/ -l:libveriwasi.so -I$(VERIWASI_ROOT)/bindings
 
 #CC=`../scripts/compiler`
 MAKE=`../scripts/make`
