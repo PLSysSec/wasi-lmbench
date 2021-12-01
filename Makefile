@@ -16,10 +16,11 @@
 
 SHELL=/bin/sh
 
-RUNTIME?=../bin/veriwasi
+RUNTIME?=veriwasi
+RUNTIME_OUT_PATH = ../bin/$(RUNTIME)
 
 build:
-	cd src && RUNTIME=$(RUNTIME) $(MAKE) OS=$(RUNTIME)/wasm
+	cd src && RUNTIME_OUT_PATH=$(RUNTIME_OUT_PATH) $(MAKE) OS=$(RUNTIME)/wasm
 
 # build: 
 # 	cd src && $(MAKE)
