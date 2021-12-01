@@ -1,0 +1,1 @@
+LD_LIBRARY_PATH=../../target/release ../../rlbox_wasm2c_sandbox/build/_deps/mod_wasm2c-src/bin/wasm2c-runner "$@"
