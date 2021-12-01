@@ -93,7 +93,7 @@ do_openclose(iter_t iterations, void *cookie)
 	int	fd;
 
 	while (iterations-- > 0) {
-		fd = open(pState->file, 0);
+		fd = open(pState->file, O_RDONLY);
 		if (fd == -1) {
 			perror(pState->file);
 			return;
@@ -142,13 +142,17 @@ main(int ac, char **av)
 			warmup, repetitions, &state);
 		micro("Simple syscall", get_n());
 	} else if (!strcmp("write", av[optind])) {
-		state.fd = open("/dev/null", 1);
+		state.fd = open("/dev/null", O_RDWR);
+		if (state.fd == -1) {
+			fprintf(stderr, "Simple write: -1\n");
+			return(1);
+		}
 		benchmp(NULL, do_write, NULL, 0, parallel, 
 			warmup, repetitions, &state);
 		micro("Simple write", get_n());
 		close(state.fd);
 	} else if (!strcmp("read", av[optind])) {
-		state.fd = open("/dev/zero", 0);
+		state.fd = open("/dev/zero", O_RDONLY);
 		if (state.fd == -1) {
 			fprintf(stderr, "Simple read: -1\n");
 			return(1);
@@ -162,7 +166,11 @@ main(int ac, char **av)
 			warmup, repetitions, &state);
 		micro("Simple stat", get_n());
 	} else if (!strcmp("fstat", av[optind])) {
-		state.fd = open(state.file, 0);
+		state.fd = open(state.file, O_RDONLY);
+		if (state.fd == -1) {
+			fprintf(stderr, "fstat: -1\n");
+			return(1);
+		}
 		benchmp(NULL, do_fstat, NULL, 0, parallel, 
 			warmup, repetitions, &state);
 		micro("Simple fstat", get_n());
