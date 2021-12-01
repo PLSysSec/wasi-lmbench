@@ -16,8 +16,13 @@
 
 SHELL=/bin/sh
 
-build: 
-	cd src && $(MAKE)
+RUNTIME?=../bin/veriwasi
+
+build:
+	cd src && RUNTIME=$(RUNTIME) $(MAKE) OS=$(RUNTIME)/wasm
+
+# build: 
+# 	cd src && $(MAKE)
 
 results: FRC
 	cd src && $(MAKE) results
