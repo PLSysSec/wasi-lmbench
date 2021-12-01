@@ -51,7 +51,7 @@ RANLIB = $(WASICLANG_ROOT)/bin/llvm-ranlib
 VERIWASI_ROOT = ../../..
 # Using O0 for debuggability. 
 # This should not affect results since we are benchmarking the runtime not the compiled Wasm code
-WASM2C_NATIVE_FLAGS = -shared -fPIC -O0 -I$(WASM2C_SRC_ROOT) $(WASM2C_SRC_ROOT)/wasm-rt-impl.c $(WASM2C_SRC_ROOT)/wasm-rt-os-unix.c $(WASM2C_SRC_ROOT)/wasm-rt-os-win.c $(WASM2C_SRC_ROOT)/wasm-rt-wasi.c -L$(VERIWASI_ROOT)/target/release/ -l:libveriwasi.so -I$(VERIWASI_ROOT)/bindings
+WASM2C_NATIVE_FLAGS = -shared -fPIC -O0 -g -I$(WASM2C_SRC_ROOT) $(WASM2C_SRC_ROOT)/wasm-rt-impl.c $(WASM2C_SRC_ROOT)/wasm-rt-os-unix.c $(WASM2C_SRC_ROOT)/wasm-rt-os-win.c $(WASM2C_SRC_ROOT)/wasm-rt-wasi.c -L$(VERIWASI_ROOT)/target/release/ -l:libveriwasi.so -I$(VERIWASI_ROOT)/bindings
 
 #CC=`../scripts/compiler`
 MAKE=`../scripts/make`
@@ -291,13 +291,13 @@ $O/flushdisk.s:flushdisk.c
 $O/flushdisk:  flushdisk.c 
 	$(COMPILE) -DMAIN -o $O/flushdisk flushdisk.c
 	$(WASM2C_BIN_ROOT)/wasm2c -o $O/flushdisk.wasm.c $O/flushdisk
-	gcc -o $(RUNTIME)/flushdisk $O/flushdisk.wasm.c $(WASM2C_NATIVE_FLAGS)
+	gcc -o $(RUNTIME_OUT_PATH)/flushdisk $O/flushdisk.wasm.c $(WASM2C_NATIVE_FLAGS)
 
 $O/mhz.s: mhz.c timing.h stats.h bench.h
 $O/mhz: mhz.c timing.h stats.h bench.h $O/lmbench.a
 	$(COMPILE) -o $O/mhz mhz.c $O/lmbench.a $(LDLIBS) -lm
 	$(WASM2C_BIN_ROOT)/wasm2c -o $O/mhz.wasm.c $O/mhz
-	gcc -o $(RUNTIME)/mhz $O/mhz.wasm.c $(WASM2C_NATIVE_FLAGS)
+	gcc -o $(RUNTIME_OUT_PATH)/mhz $O/mhz.wasm.c $(WASM2C_NATIVE_FLAGS)
 
 
 # $O/lmhttp.s:lmhttp.c timing.h stats.h bench.h
@@ -312,14 +312,14 @@ $O/bw_file_rd.s:bw_file_rd.c timing.h stats.h bench.h
 $O/bw_file_rd:  bw_file_rd.c timing.h stats.h bench.h $O/lmbench.a
 	$(COMPILE) -o $O/bw_file_rd bw_file_rd.c $O/lmbench.a $(LDLIBS)
 	$(WASM2C_BIN_ROOT)/wasm2c -o $O/bw_file_rd.wasm.c $O/bw_file_rd
-	gcc -o $(RUNTIME)/bw_file_rd $O/bw_file_rd.wasm.c $(WASM2C_NATIVE_FLAGS)
+	gcc -o $(RUNTIME_OUT_PATH)/bw_file_rd $O/bw_file_rd.wasm.c $(WASM2C_NATIVE_FLAGS)
 
 
 $O/bw_mem.s:bw_mem.c timing.h stats.h bench.h
 $O/bw_mem:  bw_mem.c timing.h stats.h bench.h $O/lmbench.a
 	$(COMPILE) -o $O/bw_mem bw_mem.c $O/lmbench.a $(LDLIBS)
 	$(WASM2C_BIN_ROOT)/wasm2c -o $O/bw_mem.wasm.c $O/bw_mem
-	gcc -o $(RUNTIME)/bw_mem $O/bw_mem.wasm.c $(WASM2C_NATIVE_FLAGS)
+	gcc -o $(RUNTIME_OUT_PATH)/bw_mem $O/bw_mem.wasm.c $(WASM2C_NATIVE_FLAGS)
 
 
 
@@ -338,21 +338,21 @@ $O/bw_mem:  bw_mem.c timing.h stats.h bench.h $O/lmbench.a
 $O/clock.s:clock.c timing.h stats.h bench.h
 $O/clock:  clock.c timing.h stats.h bench.h $O/lmbench.a
 	$(COMPILE) -o $O/clock clock.c $O/lmbench.a $(LDLIBS)
-	gcc -o $(RUNTIME)/clock $O/clock.wasm.c $(WASM2C_NATIVE_FLAGS)
+	gcc -o $(RUNTIME_OUT_PATH)/clock $O/clock.wasm.c $(WASM2C_NATIVE_FLAGS)
 
 
 $O/hello.s:hello.c
 $O/hello:  hello.c $O/lmbench.a
 	$(COMPILE) -o $O/hello hello.c $O/lmbench.a $(LDLIBS)
 	$(WASM2C_BIN_ROOT)/wasm2c -o $O/hello.wasm.c $O/hello
-	gcc -o $(RUNTIME)/hello $O/hello.wasm.c $(WASM2C_NATIVE_FLAGS)
+	gcc -o $(RUNTIME_OUT_PATH)/hello $O/hello.wasm.c $(WASM2C_NATIVE_FLAGS)
 
 
 $O/lat_alarm.s:lat_alarm.c timing.h stats.h bench.h
 $O/lat_alarm:  lat_alarm.c timing.h stats.h bench.h $O/lmbench.a
 	$(COMPILE) -o $O/lat_alarm lat_alarm.c $O/lmbench.a $(LDLIBS)
 	$(WASM2C_BIN_ROOT)/wasm2c -o $O/lat_alarm.wasm.c $O/lat_alarm
-	gcc -o $(RUNTIME)/lat_alarm $O/lat_alarm.wasm.c $(WASM2C_NATIVE_FLAGS)
+	gcc -o $(RUNTIME_OUT_PATH)/lat_alarm $O/lat_alarm.wasm.c $(WASM2C_NATIVE_FLAGS)
 
 
 # $O/lat_connect.s:lat_connect.c lib_tcp.c bench.h lib_tcp.h timing.h stats.h
@@ -367,32 +367,32 @@ $O/lat_mem_rd.s:lat_mem_rd.c timing.h stats.h bench.h
 $O/lat_mem_rd:  lat_mem_rd.c timing.h stats.h bench.h $O/lmbench.a
 	$(COMPILE) -o $O/lat_mem_rd lat_mem_rd.c $O/lmbench.a $(LDLIBS)
 	$(WASM2C_BIN_ROOT)/wasm2c -o $O/lat_mem_rd.wasm.c $O/lat_mem_rd
-	gcc -o $(RUNTIME)/lat_mem_rd $O/lat_mem_rd.wasm.c $(WASM2C_NATIVE_FLAGS)
+	gcc -o $(RUNTIME_OUT_PATH)/lat_mem_rd $O/lat_mem_rd.wasm.c $(WASM2C_NATIVE_FLAGS)
 
 
 $O/lat_mem_rd2.s:lat_mem_rd2.c timing.h stats.h bench.h
 $O/lat_mem_rd2:  lat_mem_rd2.c timing.h stats.h bench.h $O/lmbench.a
 	$(COMPILE) -o $O/lat_mem_rd2 lat_mem_rd2.c $O/lmbench.a $(LDLIBS)
 	$(WASM2C_BIN_ROOT)/wasm2c -o $O/lat_mem_rd2.wasm.c $O/lat_mem_rd2
-	gcc -o $(RUNTIME)/lat_mem_rd2 $O/lat_mem_rd2.wasm.c $(WASM2C_NATIVE_FLAGS)
+	gcc -o $(RUNTIME_OUT_PATH)/lat_mem_rd2 $O/lat_mem_rd2.wasm.c $(WASM2C_NATIVE_FLAGS)
 
 $O/lat_mem_wr.s:lat_mem_wr.c timing.h stats.h bench.h
 $O/lat_mem_wr:  lat_mem_wr.c timing.h stats.h bench.h $O/lmbench.a
 	$(COMPILE) -o $O/lat_mem_wr lat_mem_wr.c $O/lmbench.a $(LDLIBS)
 	$(WASM2C_BIN_ROOT)/wasm2c -o $O/lat_mem_wr.wasm.c $O/lat_mem_wr
-	gcc -o $(RUNTIME)/lat_mem_wr $O/lat_mem_wr.wasm.c $(WASM2C_NATIVE_FLAGS)
+	gcc -o $(RUNTIME_OUT_PATH)/lat_mem_wr $O/lat_mem_wr.wasm.c $(WASM2C_NATIVE_FLAGS)
 
 $O/lat_mem_wr2.s:lat_mem_wr2.c timing.h stats.h bench.h
 $O/lat_mem_wr2:  lat_mem_wr2.c timing.h stats.h bench.h $O/lmbench.a
 	$(COMPILE) -o $O/lat_mem_wr2 lat_mem_wr2.c $O/lmbench.a $(LDLIBS)
 	$(WASM2C_BIN_ROOT)/wasm2c -o $O/lat_mem_wr2.wasm.c $O/lat_mem_wr2
-	gcc -o $(RUNTIME)/lat_mem_wr2 $O/lat_mem_wr2.wasm.c $(WASM2C_NATIVE_FLAGS)
+	gcc -o $(RUNTIME_OUT_PATH)/lat_mem_wr2 $O/lat_mem_wr2.wasm.c $(WASM2C_NATIVE_FLAGS)
 
 $O/lat_ops.s:lat_ops.c timing.h stats.h bench.h
 $O/lat_ops:  lat_ops.c timing.h stats.h bench.h $O/lmbench.a
 	$(COMPILE) -o $O/lat_ops lat_ops.c $O/lmbench.a $(LDLIBS)
 	$(WASM2C_BIN_ROOT)/wasm2c -o $O/lat_ops.wasm.c $O/lat_ops
-	gcc -o $(RUNTIME)/lat_ops $O/lat_ops.wasm.c $(WASM2C_NATIVE_FLAGS)
+	gcc -o $(RUNTIME_OUT_PATH)/lat_ops $O/lat_ops.wasm.c $(WASM2C_NATIVE_FLAGS)
 
 # $O/lat_rpc.s:lat_rpc.c timing.h stats.h bench.h
 # $O/lat_rpc:  lat_rpc.c timing.h stats.h bench.h $O/lmbench.a
@@ -402,7 +402,7 @@ $O/lat_syscall.s:lat_syscall.c timing.h stats.h bench.h
 $O/lat_syscall:  lat_syscall.c timing.h stats.h bench.h $O/lmbench.a
 	$(COMPILE) -o $O/lat_syscall lat_syscall.c $O/lmbench.a $(LDLIBS)
 	$(WASM2C_BIN_ROOT)/wasm2c -o $O/lat_syscall.wasm.c $O/lat_syscall
-	gcc -o $(RUNTIME)/lat_syscall $O/lat_syscall.wasm.c $(WASM2C_NATIVE_FLAGS)
+	gcc -o $(RUNTIME_OUT_PATH)/lat_syscall $O/lat_syscall.wasm.c $(WASM2C_NATIVE_FLAGS)
 
 # $O/lat_tcp.s:lat_tcp.c timing.h stats.h bench.h lib_tcp.h
 # $O/lat_tcp:  lat_tcp.c timing.h stats.h bench.h lib_tcp.h $O/lmbench.a
@@ -424,62 +424,62 @@ $O/enough.s:enough.c timing.h stats.h bench.h
 $O/enough:  enough.c timing.h stats.h bench.h $O/lmbench.a
 	$(COMPILE) -o $O/enough enough.c $O/lmbench.a $(LDLIBS)
 	$(WASM2C_BIN_ROOT)/wasm2c -o $O/enough.wasm.c $O/enough
-	gcc -o $(RUNTIME)/enough $O/enough.wasm.c $(WASM2C_NATIVE_FLAGS)
+	gcc -o $(RUNTIME_OUT_PATH)/enough $O/enough.wasm.c $(WASM2C_NATIVE_FLAGS)
 
 
 $O/loop_o.s:loop_o.c timing.h stats.h bench.h
 $O/loop_o:  loop_o.c timing.h stats.h bench.h $O/lmbench.a
 	$(COMPILE) -o $O/loop_o loop_o.c $O/lmbench.a $(LDLIBS)
 	$(WASM2C_BIN_ROOT)/wasm2c -o $O/loop_o.wasm.c $O/loop_o
-	gcc -o $(RUNTIME)/loop_o $O/loop_o.wasm.c $(WASM2C_NATIVE_FLAGS)
+	gcc -o $(RUNTIME_OUT_PATH)/loop_o $O/loop_o.wasm.c $(WASM2C_NATIVE_FLAGS)
 
 
 $O/timing_o.s:timing_o.c timing.h stats.h bench.h
 $O/timing_o:  timing_o.c timing.h stats.h bench.h $O/lmbench.a
 	$(COMPILE) -o $O/timing_o timing_o.c $O/lmbench.a $(LDLIBS)
 	$(WASM2C_BIN_ROOT)/wasm2c -o $O/timing_o.wasm.c $O/timing_o
-	gcc -o $(RUNTIME)/timing_o $O/timing_o.wasm.c $(WASM2C_NATIVE_FLAGS)
+	gcc -o $(RUNTIME_OUT_PATH)/timing_o $O/timing_o.wasm.c $(WASM2C_NATIVE_FLAGS)
 
 $O/msleep.s:msleep.c timing.h stats.h bench.h
 $O/msleep:  msleep.c timing.h stats.h bench.h 
 	$(COMPILE) -o $O/msleep msleep.c
 	$(WASM2C_BIN_ROOT)/wasm2c -o $O/msleep.wasm.c $O/msleep
-	gcc -o $(RUNTIME)/msleep $O/msleep.wasm.c $(WASM2C_NATIVE_FLAGS)
+	gcc -o $(RUNTIME_OUT_PATH)/msleep $O/msleep.wasm.c $(WASM2C_NATIVE_FLAGS)
 
 $O/line.s:  line.c timing.h stats.h bench.h
 $O/line:  line.c timing.h stats.h bench.h $O/lmbench.a
 	$(COMPILE) -o $O/line line.c $O/lmbench.a $(LDLIBS)
 	$(WASM2C_BIN_ROOT)/wasm2c -o $O/line.wasm.c $O/line
-	gcc -o $(RUNTIME)/line $O/line.wasm.c $(WASM2C_NATIVE_FLAGS)
+	gcc -o $(RUNTIME_OUT_PATH)/line $O/line.wasm.c $(WASM2C_NATIVE_FLAGS)
 
 $O/tlb.s:tlb.c timing.h stats.h bench.h
 $O/tlb:  tlb.c timing.h stats.h bench.h $O/lmbench.a
 	$(COMPILE) -o $O/tlb tlb.c $O/lmbench.a $(LDLIBS)
 	$(WASM2C_BIN_ROOT)/wasm2c -o $O/tlb.wasm.c $O/tlb
-	gcc -o $(RUNTIME)/tlb $O/tlb.wasm.c $(WASM2C_NATIVE_FLAGS)
+	gcc -o $(RUNTIME_OUT_PATH)/tlb $O/tlb.wasm.c $(WASM2C_NATIVE_FLAGS)
 
 $O/cache.s:cache.c timing.h stats.h bench.h
 $O/cache:  cache.c timing.h stats.h bench.h $O/lmbench.a
 	$(COMPILE) -o $O/cache cache.c $O/lmbench.a $(LDLIBS)
 	$(WASM2C_BIN_ROOT)/wasm2c -o $O/cache.wasm.c $O/cache
-	gcc -o $(RUNTIME)/cache $O/cache.wasm.c $(WASM2C_NATIVE_FLAGS)
+	gcc -o $(RUNTIME_OUT_PATH)/cache $O/cache.wasm.c $(WASM2C_NATIVE_FLAGS)
 
 $O/lat_dram_page.s:lat_dram_page.c timing.h stats.h bench.h
 $O/lat_dram_page:  lat_dram_page.c timing.h stats.h bench.h $O/lmbench.a
 	$(COMPILE) -o $O/lat_dram_page lat_dram_page.c $O/lmbench.a $(LDLIBS)
 	$(WASM2C_BIN_ROOT)/wasm2c -o $O/lat_dram_page.wasm.c $O/lat_dram_page
-	gcc -o $(RUNTIME)/lat_dram_page $O/lat_dram_page.wasm.c $(WASM2C_NATIVE_FLAGS)
+	gcc -o $(RUNTIME_OUT_PATH)/lat_dram_page $O/lat_dram_page.wasm.c $(WASM2C_NATIVE_FLAGS)
 
 $O/lat_usleep.s:lat_usleep.c timing.h stats.h bench.h
 $O/lat_usleep:  lat_usleep.c timing.h stats.h bench.h $O/lmbench.a
 	$(COMPILE) -o $O/lat_usleep lat_usleep.c $O/lmbench.a $(LDLIBS)
 	$(WASM2C_BIN_ROOT)/wasm2c -o $O/lat_usleep.wasm.c $O/lat_usleep
-	gcc -o $(RUNTIME)/lat_usleep $O/lat_usleep.wasm.c $(WASM2C_NATIVE_FLAGS)
+	gcc -o $(RUNTIME_OUT_PATH)/lat_usleep $O/lat_usleep.wasm.c $(WASM2C_NATIVE_FLAGS)
 
 $O/lat_rand.s:lat_rand.c timing.h stats.h bench.h
 $O/lat_rand:  lat_rand.c timing.h stats.h bench.h $O/lmbench.a
 	$(COMPILE) -o $O/lat_rand lat_rand.c $O/lmbench.a $(LDLIBS)
 	$(WASM2C_BIN_ROOT)/wasm2c -o $O/lat_rand.wasm.c $O/lat_rand
-	gcc -o $(RUNTIME)/lat_rand $O/lat_rand.wasm.c $(WASM2C_NATIVE_FLAGS)
+	gcc -o $(RUNTIME_OUT_PATH)/lat_rand $O/lat_rand.wasm.c $(WASM2C_NATIVE_FLAGS)
 
 
