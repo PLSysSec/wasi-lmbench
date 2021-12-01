@@ -71,6 +71,8 @@ typedef long long int64;
 // #include	"lib_unix.h"
 
 
+void lmbench_usage(int argc, char *argv[], char* usage);
+
 
 #ifdef	DEBUG
 #	define		debug(x) fprintf x
