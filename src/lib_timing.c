@@ -152,7 +152,7 @@ lmbench_usage(int argc, char *argv[], char* usage)
 
 // This function enable parallel benchmarking
 // Since Wasm cannot handle process-level parallelism, I have changed this to 
-// basically be a noop (besides some intialization)
+// basically just calls the benchmark + invokes setup and teardown
 void 
 benchmp(benchmp_f initialize, 
 	benchmp_f benchmark,
@@ -189,6 +189,51 @@ benchmp(benchmp_f initialize,
 	settime(0);
 	save_n(1);
 
+	// double		result = 0.;
+	// double		usecs;
+	// long		i = 0;
+	// int		need_warmup;
+	// fd_set		fds;
+	// struct timeval	timeout;
+
+	result_t* r = (result_t*)malloc(sizeof_result(iterations));
+
+
+	if (!r) return;
+	insertinit(r);
+	set_results(r);
+
+	if (initialize)
+		(*initialize)(0, cookie);
+	
+	/* start experiments, collecting results */
+	insertinit(r);
+
+	// while (1) {
+	(*benchmark)(repetitions, cookie);
+	// }
+	if (cleanup) {
+		(cleanup)(repetitions, cookie);
+	}
+
+	return;
+}
+
+	// benchmp_child(initialize, 
+	// 		benchmark, 
+	// 		cleanup, 
+	// 		i,
+	// 		response[1], 
+	// 		start_signal[0], 
+	// 		result_signal[0], 
+	// 		exit_signal[0],
+	// 		enough,
+	// 		iterations,
+	// 		parallel,
+	// 		repetitions,
+	// 		cookie
+	// );
+
 	// benchmp_parent(response[0], 
 	// 	       start_signal[1], 
 	// 	       result_signal[1], 
@@ -200,8 +245,8 @@ benchmp(benchmp_f initialize,
 	// 	       repetitions,
 	// 	       enough
 	// 	);
-	return;
-}
+// 	return;
+// }
 	//goto cleanup_exit;
 
 // error_exit:
@@ -437,31 +482,31 @@ benchmp(benchmp_f initialize,
 // }
 
 
-// typedef enum { warmup, timing_interval, cooldown } benchmp_state;
+typedef enum { warmup, timing_interval, cooldown } benchmp_state;
 
-// typedef struct {
-// 	benchmp_state	state;
-// 	benchmp_f	initialize;
-// 	benchmp_f	benchmark;
-// 	benchmp_f	cleanup;
-// 	int		childid;
-// 	int		response;
-// 	int		start_signal;
-// 	int		result_signal;
-// 	int		exit_signal;
-// 	int		enough;
-//         iter_t		iterations;
-// 	int		parallel;
-//         int		repetitions;
-// 	void*		cookie;
-// 	iter_t		iterations_batch;
-// 	int		need_warmup;
-// 	long		i;
-// 	int		r_size;
-// 	result_t*	r;
-// } benchmp_child_state;
+typedef struct {
+	benchmp_state	state;
+	benchmp_f	initialize;
+	benchmp_f	benchmark;
+	benchmp_f	cleanup;
+	int		childid;
+	int		response;
+	int		start_signal;
+	int		result_signal;
+	int		exit_signal;
+	int		enough;
+        iter_t		iterations;
+	int		parallel;
+        int		repetitions;
+	void*		cookie;
+	iter_t		iterations_batch;
+	int		need_warmup;
+	long		i;
+	int		r_size;
+	result_t*	r;
+} benchmp_child_state;
 
-// static benchmp_child_state _benchmp_child_state;
+static benchmp_child_state _benchmp_child_state;
 
 // int
 // benchmp_childid()
@@ -502,6 +547,9 @@ benchmp(benchmp_f initialize,
 // 	return ((void*)&_benchmp_child_state);
 // }
 
+// simplified benchmp_child for non-parallel wasm processes
+// (therefore we don't need to mess with signals)
+// also, just generally simplified
 // void 
 // benchmp_child(benchmp_f initialize, 
 // 		benchmp_f benchmark,
@@ -512,9 +560,9 @@ benchmp(benchmp_f initialize,
 // 		int result_signal, 
 // 		int exit_signal,
 // 		int enough,
-// 	        iter_t iterations,
+// 	    iter_t iterations,
 // 		int parallel, 
-// 	        int repetitions,
+// 	    int repetitions,
 // 		void* cookie
 // 		)
 // {
@@ -554,28 +602,31 @@ benchmp(benchmp_f initialize,
 // 	timeout.tv_sec = 0;
 // 	timeout.tv_usec = 0;
 
-// 	if (benchmp_sigchld_handler != SIG_DFL) {
-// 		signal(SIGCHLD, benchmp_sigchld_handler);
-// 	} else {
-// 		signal(SIGCHLD, benchmp_child_sigchld);
-// 	}
+// 	// if (benchmp_sigchld_handler != SIG_DFL) {
+// 	// 	signal(SIGCHLD, benchmp_sigchld_handler);
+// 	// } else {
+// 	// 	signal(SIGCHLD, benchmp_child_sigchld);
+// 	// }
 
 // 	if (initialize)
 // 		(*initialize)(0, cookie);
 	
-// 	if (benchmp_sigterm_handler != SIG_DFL) {
-// 		signal(SIGTERM, benchmp_sigterm_handler);
-// 	} else {
-// 		signal(SIGTERM, benchmp_child_sigterm);
-// 	}
-// 	if (benchmp_sigterm_received)
-// 		benchmp_child_sigterm(SIGTERM);
+// 	// if (benchmp_sigterm_handler != SIG_DFL) {
+// 	// 	signal(SIGTERM, benchmp_sigterm_handler);
+// 	// } else {
+// 	// 	signal(SIGTERM, benchmp_child_sigterm);
+// 	// }
+// 	// if (benchmp_sigterm_received)
+// 	// 	benchmp_child_sigterm(SIGTERM);
 
 // 	/* start experiments, collecting results */
 // 	insertinit(_benchmp_child_state.r);
 
-// 	while (1) {
-// 		(*benchmark)(benchmp_interval(&_benchmp_child_state), cookie);
+// 	// while (1) {
+// 	(*benchmark)(iterations, cookie);
+// 	// }
+// 	if (cleanup) {
+// 		(cleanup)(iterations, cookie);
 // 	}
 // }
 
@@ -594,8 +645,8 @@ benchmp(benchmp_f initialize,
 // 	if (!state->need_warmup) {
 // 		result = stop(0,0);
 // 		if (state->cleanup) {
-// 			if (benchmp_sigchld_handler == SIG_DFL)
-// 				signal(SIGCHLD, SIG_DFL);
+// 			// if (benchmp_sigchld_handler == SIG_DFL)
+// 			// 	signal(SIGCHLD, SIG_DFL);
 // 			(*state->cleanup)(iterations, state->cookie);
 // 		}
 // 		save_n(state->iterations);
@@ -603,13 +654,13 @@ benchmp(benchmp_f initialize,
 // 		settime(result >= 0. ? (uint64)result : 0.);
 // 	}
 
-// 	/* if the parent died, then give up */
-// 	if (getppid() == 1 && state->cleanup) {
-// 		if (benchmp_sigchld_handler == SIG_DFL)
-// 			signal(SIGCHLD, SIG_DFL);
-// 		(*state->cleanup)(0, state->cookie);
-// 		exit(0);
-// 	}
+// 	// /* if the parent died, then give up */
+// 	// if (getppid() == 1 && state->cleanup) {
+// 	// 	if (benchmp_sigchld_handler == SIG_DFL)
+// 	// 		signal(SIGCHLD, SIG_DFL);
+// 	// 	(*state->cleanup)(0, state->cookie);
+// 	// 	exit(0);
+// 	// }
 
 // 	timeout.tv_sec = 0;
 // 	timeout.tv_usec = 0;
@@ -663,30 +714,30 @@ benchmp(benchmp_f initialize,
 // 			iterations = state->iterations_batch;
 // 		}
 // 		break;
-// 	case cooldown:
-// 		iterations = state->iterations_batch;
-// 		FD_SET(state->result_signal, &fds);
-// 		select(state->result_signal+1, &fds, NULL, NULL, &timeout);
-// 		if (FD_ISSET(state->result_signal, &fds)) {
-// 			/* 
-// 			 * At this point all children have stopped their
-// 			 * measurement loops, so we can block waiting for
-// 			 * the parent to tell us to send our results back.
-// 			 * From this point on, we will do no more "work".
-// 			 */
-// 			read(state->result_signal, (void*)&c, sizeof(char));
-// 			write(state->response, (void*)get_results(), state->r_size);
-// 			if (state->cleanup) {
-// 				if (benchmp_sigchld_handler == SIG_DFL)
-// 					signal(SIGCHLD, SIG_DFL);
-// 				(*state->cleanup)(0, state->cookie);
-// 			}
+// 	// case cooldown:
+// 	// 	iterations = state->iterations_batch;
+// 	// 	FD_SET(state->result_signal, &fds);
+// 	// 	select(state->result_signal+1, &fds, NULL, NULL, &timeout);
+// 	// 	if (FD_ISSET(state->result_signal, &fds)) {
+// 	// 		/* 
+// 	// 		 * At this point all children have stopped their
+// 	// 		 * measurement loops, so we can block waiting for
+// 	// 		 * the parent to tell us to send our results back.
+// 	// 		 * From this point on, we will do no more "work".
+// 	// 		 */
+// 	// 		read(state->result_signal, (void*)&c, sizeof(char));
+// 	// 		write(state->response, (void*)get_results(), state->r_size);
+// 	// 		if (state->cleanup) {
+// 	// 			if (benchmp_sigchld_handler == SIG_DFL)
+// 	// 				signal(SIGCHLD, SIG_DFL);
+// 	// 			(*state->cleanup)(0, state->cookie);
+// 	// 		}
 
-// 			/* Now wait for signal to exit */
-// 			read(state->exit_signal, (void*)&c, sizeof(char));
-// 			exit(0);
-// 		}
-// 	};
+// 	// 		/* Now wait for signal to exit */
+// 	// 		read(state->exit_signal, (void*)&c, sizeof(char));
+// 	// 		exit(0);
+// 	// 	}
+// 	// };
 // 	if (state->initialize) {
 // 		(*state->initialize)(iterations, state->cookie);
 // 	}
