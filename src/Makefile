@@ -51,7 +51,7 @@ RANLIB = $(WASICLANG_ROOT)/bin/llvm-ranlib
 WAVE_ROOT = ../../..
 # Using O0 for debuggability. 
 # This should not affect results since we are benchmarking the runtime not the compiled Wasm code
-WASM2C_NATIVE_FLAGS = -shared -fPIC -O0 -g -I$(WASM2C_SRC_ROOT) $(WASM2C_SRC_ROOT)/wasm-rt-impl.c $(WASM2C_SRC_ROOT)/wasm-rt-os-unix.c $(WASM2C_SRC_ROOT)/wasm-rt-os-win.c $(WASM2C_SRC_ROOT)/wasm-rt-wasi.c -L$(WAVE_ROOT)/target/release/ -l:libwave.so -I$(WAVE_ROOT)/bindings
+WASM2C_NATIVE_FLAGS = -shared -fPIC -O0 -g -I$(WASM2C_SRC_ROOT) $(WASM2C_SRC_ROOT)/wasm-rt-impl.c $(WASM2C_SRC_ROOT)/wasm-rt-os-unix.c $(WASM2C_SRC_ROOT)/wasm-rt-os-win.c $(WASM2C_SRC_ROOT)/wasm-rt-wasi.c -L../../build/$(RUNTIME)/release/ -l:libwave.so -I$(WAVE_ROOT)/bindings
 # WASM2C_TO_NATIVE = gcc $(WASM2C_NATIVE_FLAGS) 
 
 WASMTIME_ROOT = ../../runtimes/wasmtime
