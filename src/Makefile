@@ -42,16 +42,16 @@ WASICLANG_ROOT = $(RLBOX_ROOT)/build/_deps/wasiclang-src/build/install/opt/wasi-
 WASILIBC_ROOT =  $(RLBOX_ROOT)/build/_deps/wasiclang-src/src/wasi-libc
 CC = $(WASICLANG_ROOT)/bin/clang                        
 CXX = $(WASICLANG_ROOT)/bin/clang++                   
-CFLAGS = --sysroot  $(WASILIBC_ROOT)/sysroot/ -O0 -g
+CFLAGS = --sysroot  $(WASILIBC_ROOT)/sysroot/ -O0 -g 
 LD = $(WASICLANG_ROOT)/bin/wasm-ld
 LDFLAGS = -Wl,--export-all -Wl,--growable-table 
 NM = $(WASICLANG_ROOT)/bin/llvm-nm
 AR = $(WASICLANG_ROOT)/bin/llvm-ar
 RANLIB = $(WASICLANG_ROOT)/bin/llvm-ranlib
-VERIWASI_ROOT = ../../..
+WAVE_ROOT = ../../..
 # Using O0 for debuggability. 
 # This should not affect results since we are benchmarking the runtime not the compiled Wasm code
-WASM2C_NATIVE_FLAGS = -shared -fPIC -O0 -g -I$(WASM2C_SRC_ROOT) $(WASM2C_SRC_ROOT)/wasm-rt-impl.c $(WASM2C_SRC_ROOT)/wasm-rt-os-unix.c $(WASM2C_SRC_ROOT)/wasm-rt-os-win.c $(WASM2C_SRC_ROOT)/wasm-rt-wasi.c -L$(VERIWASI_ROOT)/target/release/ -l:libveriwasi.so -I$(VERIWASI_ROOT)/bindings
+WASM2C_NATIVE_FLAGS = -shared -fPIC -O0 -g -I$(WASM2C_SRC_ROOT) $(WASM2C_SRC_ROOT)/wasm-rt-impl.c $(WASM2C_SRC_ROOT)/wasm-rt-os-unix.c $(WASM2C_SRC_ROOT)/wasm-rt-os-win.c $(WASM2C_SRC_ROOT)/wasm-rt-wasi.c -L$(WAVE_ROOT)/target/release/ -l:libwave.so -I$(WAVE_ROOT)/bindings
 # WASM2C_TO_NATIVE = gcc $(WASM2C_NATIVE_FLAGS) 
 
 WASMTIME_ROOT = ../../runtimes/wasmtime
@@ -80,7 +80,7 @@ WASMTIME_ROOT = ../../runtimes/wasmtime
 wasm2c_to_native = $(WASM2C_BIN_ROOT)/wasm2c -o $1.wasm.c $1 && gcc -o $2 $1.wasm.c $(WASM2C_NATIVE_FLAGS)
 wasmtime_to_native = $(WASMTIME_ROOT)/target/release/wasmtime compile $1 -o $2
 
-to_native = $(if $(filter $(RUNTIME),veriwasi),$(call wasm2c_to_native,$1,$2),$(call wasmtime_to_native,$1,$2))
+to_native = $(if $(filter $(RUNTIME),wave),$(call wasm2c_to_native,$1,$2),$(call wasmtime_to_native,$1,$2))
 # to_native = $(if $(filter $(RUNTIME),veriwasi),echo using wasm2c runtime is $(RUNTIME),echo using wasmtime runtime is $(RUNTIME))
 
 # Command that can be called as $(TO_NATIVE) -o $OUTPUT_FILE $INPUT_FILE

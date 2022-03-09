@@ -16,7 +16,7 @@
 
 SHELL=/bin/sh
 
-RUNTIME?=veriwasi
+RUNTIME?=wave
 RUNTIME_OUT_PATH = ../bin/$(RUNTIME)
 
 build:
