@@ -35,11 +35,18 @@
 SHELL=/bin/sh
 
 RLBOX_ROOT = ../../../rlbox_wasm2c_sandbox
-WASM2C_SRC_ROOT = $(RLBOX_ROOT)/build/_deps/mod_wasm2c-src/wasm2c
-WASM2C_BIN_ROOT = $(RLBOX_ROOT)/build/_deps/mod_wasm2c-src/bin
 
-WASICLANG_ROOT = $(RLBOX_ROOT)/build/_deps/wasiclang-src/build/install/opt/wasi-sdk
-WASILIBC_ROOT =  $(RLBOX_ROOT)/build/_deps/wasiclang-src/src/wasi-libc
+WASI_SDK_ROOT=../../../tools/wasi-sdk
+WASI_SDK_INSTALL=$(WASI_SDK_ROOT)/build/install/opt/wasi-sdk/
+WASM2C_ROOT=../../../tools/wasm2c_sandbox_compiler
+
+WASM2C_SRC_ROOT = $(WASM2C_ROOT)/wasm2c
+WASM2C_BIN_ROOT = $(WASM2C_ROOT)/bin
+
+#./build/install/opt/wasi-sdk/share/clang
+
+WASICLANG_ROOT = $(WASI_SDK_ROOT)/build/install/opt/wasi-sdk
+#WASILIBC_ROOT =  ../../../tools/wasi-libc
 CC = $(WASICLANG_ROOT)/bin/clang                        
 CXX = $(WASICLANG_ROOT)/bin/clang++                   
 CFLAGS = --sysroot  $(WASILIBC_ROOT)/sysroot/ -O0 -g 
